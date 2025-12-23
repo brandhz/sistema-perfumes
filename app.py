@@ -9,6 +9,13 @@ import json
 # --- CONFIGURAÇÃO ---
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
+# --- SENHA DE PROTEÇÃO (PIN) ---
+# Como o repo é público, isso impede estranhos de mexerem
+senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
+if senha != "130712":
+    st.warning("Por favor, digite a senha para acessar o sistema.")
+    st.stop()
+
 # 🔗 SUA URL
 URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZnWaV-k/edit?gid=1032083161#gid=1032083161"
 
@@ -26,25 +33,35 @@ def limpar_numero(valor):
     except:
         return 0.0
 
-# --- CONEXÃO BLINDADA ---
+# --- CONEXÃO BLINDADA (AUTO-REPAIR) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
+        # Tenta ler do Cofre de Segredos (Streamlit Secrets)
         if "gcp_service_account" in st.secrets:
+            # Pega o texto do JSON
             info_json = st.secrets["gcp_service_account"]["json_key"]
-            creds_dict = json.loads(info_json)
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        else:
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
             
-        client = gspread.authorize(creds)
-        return client.open_by_url(URL_PLANILHA)
+            # Converte texto em dicionário
+            creds_dict = json.loads(info_json)
+            
+            # --- CORREÇÃO AUTOMÁTICA DE QUEBRA DE LINHA ---
+            # Se a chave privada veio 'colada' errada, isso conserta:
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            client = gspread.authorize(creds)
+            return client.open_by_url(URL_PLANILHA)
+        else:
+            st.error("❌ Erro: Configure o segredo [gcp_service_account] no painel do Streamlit.")
+            return None
+            
     except Exception as e:
         st.error(f"❌ Erro de Conexão: {e}")
         return None
 
-# --- LEITURA DE DADOS (O ERRO ESTAVA AQUI, AGORA ESTÁ COMPLETO) ---
 def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
     try:
         worksheet = sheet.worksheet(nome_aba)
@@ -107,8 +124,11 @@ st.title("📦 Sistema Zeidan Parfum")
 sheet = conectar_google_sheets()
 df_produtos, df_compras, df_vendas = carregar_dados_cache()
 
-if sheet is None or df_produtos is None:
-    st.warning("⚠️ Aguardando conexão...")
+if sheet is None:
+    st.stop() # Para o app aqui se não conectar
+
+if df_produtos is None:
+    st.warning("⚠️ Conectado, mas não consegui ler os produtos.")
     st.stop()
 
 # --- MENU ---
@@ -233,46 +253,3 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
-# --- PROTEÇÃO COM SENHA SIMPLES ---
-# Escolha sua senha aqui embaixo (pode trocar '1234' pelo que quiser)
-senha_acesso = st.sidebar.text_input("🔑 Senha do Sistema", type="password")
-
-if senha_acesso != "130712":
-    st.warning("🔒 Digite a senha no menu lateral para acessar o sistema.")
-    st.stop() # Isso para o código aqui e não deixa carregar o resto
-# --- CONEXÃO BLINDADA (COM CORREÇÃO AUTOMÁTICA DE JWT) ---
-@st.cache_resource
-def conectar_google_sheets():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    try:
-        # 1. Tenta ler do Cofre de Segredos (Streamlit Cloud)
-        if "gcp_service_account" in st.secrets:
-            try:
-                # Pega o texto bruto
-                info_json = st.secrets["gcp_service_account"]["json_key"]
-                
-                # Converte para dicionário
-                creds_dict = json.loads(info_json)
-                
-                # --- O PULO DO GATO ---
-                # Essa linha conserta a chave privada se ela veio quebrada na colagem
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-                # ---------------------
-                
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-            except json.JSONDecodeError:
-                # Se falhar ao ler JSON, tenta ler como TOML direto (Plano B)
-                creds_dict = dict(st.secrets["gcp_service_account"])
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        
-        # 2. Fallback: Se não achar no cofre, tenta ler arquivo local (PC)
-        else:
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
-            
-        client = gspread.authorize(creds)
-        return client.open_by_url(URL_PLANILHA)
-        
-    except Exception as e:
-        st.error(f"❌ Erro de Conexão: {e}")
-        return None
