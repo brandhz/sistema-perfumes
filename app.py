@@ -240,3 +240,39 @@ senha_acesso = st.sidebar.text_input("🔑 Senha do Sistema", type="password")
 if senha_acesso != "130712":
     st.warning("🔒 Digite a senha no menu lateral para acessar o sistema.")
     st.stop() # Isso para o código aqui e não deixa carregar o resto
+# --- CONEXÃO BLINDADA (COM CORREÇÃO AUTOMÁTICA DE JWT) ---
+@st.cache_resource
+def conectar_google_sheets():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    try:
+        # 1. Tenta ler do Cofre de Segredos (Streamlit Cloud)
+        if "gcp_service_account" in st.secrets:
+            try:
+                # Pega o texto bruto
+                info_json = st.secrets["gcp_service_account"]["json_key"]
+                
+                # Converte para dicionário
+                creds_dict = json.loads(info_json)
+                
+                # --- O PULO DO GATO ---
+                # Essa linha conserta a chave privada se ela veio quebrada na colagem
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                # ---------------------
+                
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            except json.JSONDecodeError:
+                # Se falhar ao ler JSON, tenta ler como TOML direto (Plano B)
+                creds_dict = dict(st.secrets["gcp_service_account"])
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        
+        # 2. Fallback: Se não achar no cofre, tenta ler arquivo local (PC)
+        else:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
+            
+        client = gspread.authorize(creds)
+        return client.open_by_url(URL_PLANILHA)
+        
+    except Exception as e:
+        st.error(f"❌ Erro de Conexão: {e}")
+        return None
