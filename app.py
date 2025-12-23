@@ -233,3 +233,10 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
+# --- PROTEÇÃO COM SENHA SIMPLES ---
+# Escolha sua senha aqui embaixo (pode trocar '1234' pelo que quiser)
+senha_acesso = st.sidebar.text_input("🔑 Senha do Sistema", type="password")
+
+if senha_acesso != "130712":
+    st.warning("🔒 Digite a senha no menu lateral para acessar o sistema.")
+    st.stop() # Isso para o código aqui e não deixa carregar o resto
