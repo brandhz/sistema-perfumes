@@ -1,47 +1,63 @@
 import streamlit as st
+import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+import pytz
 import json
 
-st.title("🕵️‍♂️ Modo Diagnóstico Zeidan")
+# --- CONFIGURAÇÃO ---
+st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
-st.write("Verificando Cofre de Segredos...")
+# 🔗 SUA URL
+URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZnWaV-k/edit?gid=1032083161#gid=1032083161"
 
-# 1. Verifica se o cabeçalho existe
-if "gcp_service_account" in st.secrets:
-    st.success("✅ Cabeçalho [gcp_service_account] encontrado!")
-    
-    # 2. Verifica se a chave json_key existe
-    if "json_key" in st.secrets["gcp_service_account"]:
-        st.success("✅ Campo 'json_key' encontrado!")
+# --- FUNÇÕES ÚTEIS ---
+def pegar_hora_brasil():
+    fuso = pytz.timezone('America/Sao_Paulo')
+    return datetime.now(fuso)
+
+def limpar_numero(valor):
+    if not valor: return 0.0
+    if isinstance(valor, (int, float)): return float(valor)
+    valor = str(valor).replace("R$", "").replace(" ", "").replace(".", "").replace(",", ".")
+    try:
+        return float(valor)
+    except:
+        return 0.0
+
+# --- CONEXÃO BLINDADA (VIA SECRETS) ---
+@st.cache_resource
+def conectar_google_sheets():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    try:
+        # 1. Tenta ler do Cofre de Segredos (Streamlit Cloud)
+        if "gcp_service_account" in st.secrets:
+            info_json = st.secrets["gcp_service_account"]["json_key"]
+            creds_dict = json.loads(info_json)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         
-        conteudo_bruto = st.secrets["gcp_service_account"]["json_key"]
-        st.info(f"📏 Tamanho do conteúdo colado: {len(conteudo_bruto)} caracteres")
+        # 2. Fallback: Se não achar no cofre, tenta ler arquivo local (PC)
+        else:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credenciais.json", scope)
+            
+        client = gspread.authorize(creds)
+        return client.open_by_url(URL_PLANILHA)
         
-        # 3. Tenta ler o JSON
-        try:
-            creds = json.loads(conteudo_bruto)
-            st.success("✅ O Python conseguiu ler o JSON! A formatação está correta.")
-            
-            # 4. Verifica os campos obrigatórios
-            if "private_key" in creds:
-                chave = creds["private_key"]
-                if "-----BEGIN PRIVATE KEY-----" in chave:
-                    st.success(f"✅ Chave Privada detectada! (Começa com: {chave[:30]}...)")
-                else:
-                    st.error("❌ A Chave Privada existe, mas parece inválida (não começa com BEGIN PRIVATE KEY).")
-            else:
-                st.error("❌ ERRO CRÍTICO: O campo 'private_key' SUMIU do seu arquivo.")
-                
-            if "client_email" in creds:
-                st.success(f"✅ Email detectado: {creds['client_email']}")
-            else:
-                st.error("❌ ERRO: O campo 'client_email' não foi encontrado.")
-                
-        except json.JSONDecodeError as e:
-            st.error(f"❌ ERRO DE FORMATAÇÃO: O texto colado não é um JSON válido.")
-            st.error(f"Detalhe do erro: {e}")
-            st.warning("Dica: Verifique se você fechou todas as chaves '}' ou se não colou texto extra.")
-            
-    else:
-        st.error("❌ A chave 'json_key' não existe. Verifique se escreveu json_key = ''' no começo.")
-else:
-    st.error("❌ O cabeçalho [gcp_service_account] não existe. Verifique a primeira linha do Secrets.")
+    except Exception as e:
+        st.error(f"❌ Erro de Conexão: {e}")
+        return None
+
+def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
+    try:
+        worksheet = sheet.worksheet(nome_aba)
+        dados = worksheet.get_all_records()
+        df = pd.DataFrame(dados)
+        if df.empty:
+            df = pd.DataFrame(columns=colunas_esperadas)
+        else:
+            for col in colunas_esperadas:
+                if col not in df.columns:
+                    df[col] = ""
+            if "ID" in df.columns:
+                df["ID"] = df["ID"].astype(str)
