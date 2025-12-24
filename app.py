@@ -5,58 +5,51 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
 import json
-import os  # <--- NOVA IMPORTAÇÃO NECESSÁRIA
-from dotenv import load_dotenv  # <--- NOVA IMPORTAÇÃO NECESSÁRIA
+import os
 
-# -----------------------------------------------------------
-# CARREGA AS CONFIGURAÇÕES DE SEGURANÇA (.env)
-# -----------------------------------------------------------
-load_dotenv()
+# Tenta carregar o .env (apenas se estiver no seu computador local)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except:
+    pass 
 
-# Configuração da página (Mantendo sua configuração original)
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
-# -----------------------------------------------------------
-# SISTEMA DE LOGIN (AGORA SEGURO)
-# -----------------------------------------------------------
-# Pega a senha do arquivo .env em vez de deixá-la no código
-senha_secreta = os.getenv("SENHA_ACESSO")
+# --- FUNÇÃO DE SEGURANÇA ---
+def pegar_segredo(chave):
+    if chave in st.secrets:
+        return st.secrets[chave]
+    return os.getenv(chave)
 
-# Verifica se você criou o arquivo .env corretamente
+# --- LOGIN ---
+senha_secreta = pegar_segredo("SENHA_ACESSO")
+
+# Se não tiver senha configurada, avisa e para
 if not senha_secreta:
-    st.error("ERRO: Senha não encontrada! Verifique se o arquivo .env existe e tem a variável SENHA_ACESSO.")
+    st.error("ERRO: Senha não configurada! Configure nos 'Secrets' do Streamlit ou no .env.")
     st.stop()
 
-# Campo para digitar a senha
 senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
 
-# Verifica se a senha digitada bate com a senha do arquivo .env
-if senha != senha_secreta:
+if senha != str(senha_secreta):
     st.warning("Por favor, digite a senha para acessar o sistema.")
     st.stop()
 
-# -----------------------------------------------------------
-# URL DA PLANILHA (AGORA SEGURA)
-# -----------------------------------------------------------
-# Pega o link do arquivo .env
-URL_PLANILHA = os.getenv("LINK_DA_PLANILHA")
+# --- URL DA PLANILHA ---
+URL_PLANILHA = pegar_segredo("LINK_DA_PLANILHA")
 
-if not URL_PLANILHA:
-    st.error("ERRO: Link da planilha não encontrado! Verifique a variável LINK_DA_PLANILHA no .env.")
-    st.stop()
-
-# -----------------------------------------------------------
-# FUNÇÕES ÚTEIS
-# -----------------------------------------------------------
+# --- FUNÇÕES ---
 def pegar_hora_brasil():
-    # Sua função original mantida
     fuso = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso)
+
+# ... Daqui para baixo continua o seu código original (limpar_numero, etc.) ...
 
 def limpar_numero(valor):
     if not valor: return 0.0
     if isinstance(valor, (int, float)): return float(valor)
-    valor = str(valor).replace("R$", "").replace(" ", "").replace(".", "").replace(",", ".")
+    valor = str(valor).replace("R$", "").replace(".", "").replace(",", ".")
     try:
         return float(valor)
     except:
