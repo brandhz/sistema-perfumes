@@ -289,4 +289,29 @@ try:
 except:
     st.error("Não consegui ler o e-mail do robô nos secrets.")
 
+# --- CÓDIGO DE TESTE (DIAGNÓSTICO) ---
+# Cole isso no final do arquivo, salve e veja o que aparece no site
+try:
+    if "CREDENCIAIS_JSON" in st.secrets:
+        # 1. Monta as credenciais
+        dados = json.loads(st.secrets["CREDENCIAIS_JSON"], strict=False)
+        creds_teste = ServiceAccountCredentials.from_json_keyfile_dict(dados, ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"])
+        client_teste = gspread.authorize(creds_teste)
+        
+        # 2. Pergunta ao robô: "Quem é você e o que você vê?"
+        st.divider()
+        st.warning(f"🤖 Sou o robô: {dados['client_email']}")
+        
+        # 3. Lista tudo que ele tem acesso
+        arquivos = client_teste.list_spreadsheet_files()
+        st.write("📋 **Planilhas que eu consigo ver:**")
+        
+        if not arquivos:
+            st.error("❌ NÃO CONSIGO VER NENHUMA PLANILHA! (Isso confirma que faltou compartilhar ou ativar a Drive API)")
+        else:
+            for arq in arquivos:
+                st.success(f"✅ Vejo a planilha: {arq['name']} (ID: {arq['id']})")
+                
+except Exception as e:
+    st.error(f"Erro no teste: {e}")
 
