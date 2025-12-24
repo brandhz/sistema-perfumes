@@ -8,84 +8,106 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
-# --- CSS PERSONALIZADO (SUA IDENTIDADE VISUAL) ---
+# --- ESTILO VISUAL (CSS) ---
+# Aqui acontece a mágica do design
 st.markdown("""
 <style>
-    /* 1. Fundo Geral do Site (Azul Escuro Profundo) */
+    /* Importando Fontes Elegantes do Google */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600&display=swap');
+
+    /* 1. Fundo e Fontes Gerais */
     .stApp {
-        background-color: #162d48;
+        background-color: #162d48; /* Azul Profundo (Fundo) */
         color: #FFFFFF;
-    }
-    
-    /* Ajuste para inputs de texto (barra de busca) */
-    .stTextInput > div > div > input {
-        color: #162d48;
-        background-color: #d2d2d2;
+        font-family: 'Montserrat', sans-serif;
     }
 
-    /* 2. Cartão do Produto (Azul Médio) */
+    /* 2. Títulos (H1, H2, H3) com fonte Serifada (Estilo Dior/Vogue) */
+    h1, h2, h3, .prod-title {
+        font-family: 'Playfair Display', serif !important;
+    }
+
+    /* 3. Ajuste da Barra de Busca */
+    .stTextInput > div > div > input {
+        color: #162d48;
+        background-color: #d2d2d2; /* Prata */
+        border-radius: 20px;
+        border: none;
+        padding: 10px 15px;
+    }
+    
+    /* 4. Cartão do Produto */
     .product-card {
-        background-color: #233e58;
-        padding: 20px;
-        border-radius: 15px;
-        margin-bottom: 20px;
+        background-color: #233e58; /* Azul Médio */
+        padding: 15px;
+        border-radius: 12px;
+        margin-bottom: 25px;
         text-align: center;
-        border: 1px solid #162d48; /* Borda sutil */
-        transition: transform 0.2s, border-color 0.2s;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 1px solid rgba(210, 210, 210, 0.2); /* Borda prateada sutil */
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
     
-    /* Efeito ao passar o mouse */
+    /* Efeito ao passar o mouse no card */
     .product-card:hover {
-        transform: scale(1.02);
-        border-color: #d2d2d2; /* Borda Cinza Claro ao passar o mouse */
+        transform: translateY(-5px); /* Sobe um pouquinho */
+        border-color: #d2d2d2; /* Borda fica mais forte */
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
     }
-    
-    /* Título do Produto */
+
+    /* Título do Perfume */
     .prod-title {
         font-size: 18px;
-        font-weight: 600;
-        margin: 10px 0;
-        height: 50px;
+        font-weight: 400;
+        margin: 15px 0 5px 0;
+        min-height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #FFFFFF; /* Branco */
+        color: #FFFFFF;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
-    
+
     /* Preço */
     .price-tag {
-        font-size: 24px;
-        color: #d2d2d2; /* Cinza Claro (Destaque) */
-        font-weight: bold;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 20px;
+        color: #d2d2d2; /* Prata */
+        font-weight: 300;
         margin-bottom: 15px;
+        border-top: 1px solid rgba(210,210,210, 0.2);
+        padding-top: 10px;
     }
-    
-    /* Botão do WhatsApp (Verde padrão para reconhecimento, mas estilizado) */
+
+    /* Botão do WhatsApp */
     a.zap-btn {
         display: inline-block;
         width: 100%;
         padding: 12px;
-        background-color: #25D366; 
+        background: linear-gradient(45deg, #25D366, #128C7E);
         color: white !important;
         text-decoration: none;
-        border-radius: 8px;
-        font-weight: bold;
-        text-align: center;
-        transition: background-color 0.3s;
+        border-radius: 25px; /* Botão redondinho */
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+        transition: transform 0.2s;
+        text-transform: uppercase;
     }
     a.zap-btn:hover {
-        background-color: #128C7E;
+        transform: scale(1.05);
+        opacity: 0.9;
     }
     
-    /* Divisor */
-    hr {
-        border-color: #d2d2d2;
+    /* Remover margens extras do topo */
+    .block-container {
+        padding-top: 2rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO ---
+# --- CONEXÃO (LÓGICA BLINDADA) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -110,79 +132,85 @@ def carregar_catalogo():
         ws = sheet.worksheet("Produtos")
         dados = ws.get_all_records()
         df = pd.DataFrame(dados)
-        cols_necessarias = ["Produto", "Preco_Venda"]
-        for col in cols_necessarias:
-            if col not in df.columns:
-                return pd.DataFrame()
+        # Verifica se as colunas existem
+        if "Produto" not in df.columns or "Preco_Venda" not in df.columns:
+            return pd.DataFrame()
         return df
     except:
         return pd.DataFrame()
 
-# --- CABEÇALHO COM LOGO ---
-c1, c2 = st.columns([1, 4])
-with c1:
-    # Tenta carregar a logo local, se não tiver usa ícone
-    # Certifique-se de que o nome do arquivo no GitHub é logo.png ou logo.jpg
+# --- ÁREA DA LOGO E TÍTULO ---
+c1, c2, c3 = st.columns([1, 2, 1])
+
+with c2: # Coluna do meio (Centralizada)
+    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+    
+    # Tenta carregar a logo (png ou jpg)
     if os.path.exists("logo.png"):
-        st.image("logo.png", width=120)
+        st.image("logo.png", width=200) # Logo maior
     elif os.path.exists("logo.jpg"):
-        st.image("logo.jpg", width=120)
+        st.image("logo.jpg", width=200)
     else:
-        st.image("https://cdn-icons-png.flaticon.com/512/4003/4003733.png", width=80) 
-        
-with c2:
-    st.title("Zeidan Parfum")
-    st.markdown(f"<span style='color: #d2d2d2;'>A essência da elegância.</span>", unsafe_allow_html=True)
-
-st.markdown("---")
-
-# --- CARREGA DADOS ---
-df = carregar_catalogo()
-
-if df.empty:
-    st.warning("⏳ Carregando catálogo...")
-    st.button("🔄 Atualizar")
-    st.stop()
-
-# --- BUSCA ---
-busca = st.text_input("🔍 O que você procura?", placeholder="Digite o nome do perfume...")
-if busca:
-    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
+        # Se não tiver logo, mostra texto bonito
+        st.markdown("<h1 style='color:#d2d2d2; font-size: 50px;'>ZEIDAN</h1>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#fff; letter-spacing: 4px; font-size: 18px;'>PARFUM</h3>", unsafe_allow_html=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- VITRINE ---
-df = df[df["Preco_Venda"] != ""] # Remove produtos sem preço
+# --- BARRA DE BUSCA ---
+c_busca1, c_busca2, c_busca3 = st.columns([1, 2, 1])
+with c_busca2:
+    busca = st.text_input("", placeholder="🔍 Qual perfume você deseja hoje?")
 
-cols = st.columns(3)
+# --- CARREGAMENTO ---
+df = carregar_catalogo()
+
+if df.empty:
+    st.info("Carregando as melhores fragrâncias...")
+    st.stop()
+
+# --- FILTRAGEM ---
+if busca:
+    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
+
+# Remove produtos sem preço
+df = df[df["Preco_Venda"] != ""]
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# --- VITRINE (GRID) ---
+# Usamos container do Streamlit para ajustar responsividade
+cols = st.columns(3) # 3 colunas no desktop
 
 for index, row in df.iterrows():
-    c_index = index % 3
-    with cols[c_index]:
-        # Imagem do produto
+    with cols[index % 3]:
+        # Imagem
         img_url = row.get("Imagem", "")
         if not str(img_url).startswith("http"):
-            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
+            # Ícone elegante se não tiver foto
+            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png" 
 
-        # Preço
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
         
-        # WhatsApp Link
-        msg = f"Olá! Vi o *{row['Produto']}* no site por R$ {preco} e tenho interesse."
-        msg_encoded = msg.replace(" ", "%20")
+        # --- SEU NÚMERO AQUI ---
+        TEL_ZEIDAN = "5531991668430" "5531971789632"
         
-        # --- ATENÇÃO: COLOQUE SEU NÚMERO AQUI ---
-        TEL_ZEIDAN = "5531999999999" 
+        msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
+        msg_encoded = msg.replace(" ", "%20")
         link_zap = f"https://wa.me/{TEL_ZEIDAN}?text={msg_encoded}"
 
-        # Card HTML
+        # HTML do Card
         st.markdown(f"""
         <div class="product-card">
-            <img src="{img_url}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 10px;">
+            <div style="height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 10px;">
+                <img src="{img_url}" style="width: 100%; height: 100%; object-fit: contain;">
+            </div>
             <div class="prod-title">{row['Produto']}</div>
             <div class="price-tag">R$ {preco}</div>
             <a href="{link_zap}" target="_blank" class="zap-btn">
-                🛒 Encomendar
+                💎 Encomendar
             </a>
         </div>
         """, unsafe_allow_html=True)
