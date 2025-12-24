@@ -117,4 +117,5 @@ def gerar_id_venda(df_vendas):
 def gerar_id_compra(df_compras):
     if df_compras is None or df_compras.empty or "Pedido" not in df_compras.columns: return "CP01"
     try:
-        lista = [x for x in df_compras["Pedido"] if str(x
+        lista = [x for x in df_compras["Pedido"] if str(x)
+
