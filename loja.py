@@ -16,7 +16,7 @@ NUMERO_ZAP = "5531991668430"
 HOME_URL = "https://zeidanparfum.streamlit.app"
 # ======================================================================
 
-# --- ESTILO VISUAL (CSS MONTSERRAT + CORREÇÃO DA LOGO) ---
+# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT + ZOOM) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
@@ -126,6 +126,36 @@ st.markdown("""
         height: auto;
         padding-bottom: 20px;
     }
+
+    /* Forçar 2 colunas na vitrine (melhor comportamento no mobile) */
+    [data-testid="column"] {
+        min-width: calc(50% - 1rem) !important;
+    }
+
+    /* Container da imagem com zoom suave */
+    .img-hover-zoom {
+        height: 250px;
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Imagem com transição suave */
+    .prod-img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        transition: transform 0.4s ease;
+    }
+
+    /* Zoom leve no hover */
+    .img-hover-zoom:hover .prod-img {
+        transform: scale(1.08);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -196,7 +226,22 @@ col_menu, col_vazio = st.columns([2, 3])
 with col_menu:
     marca = st.selectbox(
         "Marcas",
-        ["Todas", "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH", "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF", "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN", "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR", "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE", "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO", "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER", "LANCÔME", "LATTAFA", "MAISON ALHAMBRA", "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF", "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE", "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY", "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO", "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"],
+        [
+            "Todas",
+            "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
+            "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
+            "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
+            "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR",
+            "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE",
+            "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO",
+            "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER",
+            "LANCÔME", "LATTAFA", "MAISON ALHAMBRA",
+            "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF",
+            "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE",
+            "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY",
+            "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
+            "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
+        ],
         index=0,
     )
 
@@ -234,7 +279,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE (2 PRODUTOS POR LINHA + ZOOM NA IMAGEM) ---
+# --- VITRINE (2 PRODUTOS POR LINHA + ZOOM SUAVE NA IMAGEM) ---
 cols = st.columns(2)
 
 for index, row in df.iterrows():
@@ -251,11 +296,11 @@ for index, row in df.iterrows():
 
         st.markdown(f"""
         <div class="product-card">
-            <a href="{img_url}" target="_blank"
-               style="height: 250px; display: flex; align-items: center; justify-content: center;
-                      background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
-                <img src="{img_url}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-            </a>
+            <div class="img-hover-zoom">
+                <a href="{img_url}" target="_blank">
+                    <img src="{img_url}" class="prod-img">
+                </a>
+            </div>
             <div>
                 <div class="prod-title">{row['Produto']}</div>
                 <div class="price-tag">R$ {preco}</div>
