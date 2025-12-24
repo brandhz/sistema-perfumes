@@ -138,19 +138,30 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- HEADER E LOGO ---
-c1, c2, c3 = st.columns([1, 6, 1])
+# --- HEADER E LOGO CENTRALIZADOS (FLEXBOX) ---
+# Usamos apenas uma coluna e forçamos o centro com HTML/CSS
+st.markdown("""
+    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
+""", unsafe_allow_html=True)
 
-with c2: 
-    st.markdown("<div style='text-align: center; margin-bottom: 20px;'>", unsafe_allow_html=True)
-    if os.path.exists("logo.png"):
-        st.image("logo.png", width=350) 
-    elif os.path.exists("logo.jpg"):
-        st.image("logo.jpg", width=350)
-    else:
-        st.markdown("<h1 style='color:#d2d2d2; font-size: 60px; font-weight:800;'>ZEIDAN</h1>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#fff; letter-spacing: 5px; font-size: 20px;'>PARFUM</h3>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+if os.path.exists("logo.png"):
+    # Lê a imagem em binário para exibir via HTML (truque para centralizar)
+    import base64
+    with open("logo.png", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(f'<img src="data:image/png;base64,{data}" style="width: 350px; max-width: 80%;">', unsafe_allow_html=True)
+
+elif os.path.exists("logo.jpg"):
+    import base64
+    with open("logo.jpg", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(f'<img src="data:image/jpeg;base64,{data}" style="width: 350px; max-width: 80%;">', unsafe_allow_html=True)
+
+else:
+    # Texto caso não tenha imagem
+    st.markdown("<div style='text-align: center;'><h1 style='color:#d2d2d2; font-size: 60px;'>ZEIDAN</h1><h3 style='color:#fff;'>PARFUM</h3></div>", unsafe_allow_html=True)
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 # --- BARRA DE BUSCA ---
 c_busca1, c_busca2, c_busca3 = st.columns([1, 4, 1])
