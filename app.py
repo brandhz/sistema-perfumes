@@ -2,234 +2,266 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
-import pytz
 import json
 import os
+import base64
 
-# --- CONFIGURAÇÃO INICIAL ---
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except:
-    pass 
+# --- CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
-st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
+# ======================================================================
+# 👇 SEU WHATSAPP AQUI
+NUMERO_ZAP = "5531991668430"
+# 👇 URL DA HOME (APP PUBLICADO)
+HOME_URL = "https://zeidanparfum.streamlit.app"
+# ======================================================================
 
-# --- LOGIN SIMPLES ---
-senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
-if senha != "12041995": 
-    st.info("Digite a senha para acessar.")
-    st.stop()
+# --- ESTILO VISUAL (CSS MONTSERRAT + CORREÇÃO DA LOGO) ---
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
 
-# --- CONEXÃO COM GOOGLE SHEETS ---
-def conectar_google_sheets():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    html, body, [class*="css"] {
+        font-family: 'Montserrat', sans-serif;
+    }
     
+    /* Fundo */
+    .stApp {
+        background-color: #162d48;
+        color: #FFFFFF;
+    }
+
+    /* Barra de Busca - específica para o campo desta página */
+    .stTextInput input[aria-label="Busca Perfume"] {
+        color: #162d48;
+        background-color: #d2d2d2;
+        border-radius: 30px;
+        border: none;
+        padding: 15px 25px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+    }
+    
+    /* Cartão do Produto */
+    .product-card {
+        background-color: #233e58;
+        padding: 20px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        text-align: center;
+        border: 1px solid rgba(210, 210, 210, 0.1);
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-5px);
+        border-color: #d2d2d2;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    }
+
+    /* Título do Perfume */
+    .prod-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 15px 0 10px 0;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #FFFFFF;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        line-height: 1.3;
+    }
+
+    /* Preço */
+    .price-tag {
+        font-size: 24px;
+        color: #d2d2d2;
+        font-weight: 800;
+        margin-bottom: 15px;
+        border-top: 1px solid rgba(210,210,210, 0.1);
+        padding-top: 15px;
+    }
+
+    /* Botão do WhatsApp */
+    a.zap-btn {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #25D366, #128C7E);
+        color: white !important;
+        text-decoration: none;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    a.zap-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 20px rgba(37, 211, 102, 0.5);
+    }
+    
+    /* Espaçamento do container principal */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 5rem;
+    }
+    
+    /* --- CORREÇÃO DA LOGO --- */
+    .logo-img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 250px;
+        max-width: 80%;
+        height: auto;
+        padding-bottom: 20px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- CONEXÃO ---
+@st.cache_resource
+def conectar_google_sheets():
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
     try:
         if "CREDENCIAIS_JSON" in st.secrets:
             info_json = st.secrets["CREDENCIAIS_JSON"]
             creds_dict = json.loads(info_json, strict=False)
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(
+                creds_dict, scope
+            )
             client = gspread.authorize(creds)
-            
-            # Conecta direto, sem avisos na tela
-            NOME_PLANILHA = "Controle Zeidan Parfum"
-            return client.open(NOME_PLANILHA)
-            
+            return client.open("Controle Zeidan Parfum")
         else:
-            st.error("❌ ERRO: Secrets 'CREDENCIAIS_JSON' sumiu.")
             return None
-
-    except Exception as e:
-        st.error(f"❌ Erro de Conexão: {e}")
-        st.markdown(f"1. Verifique se o nome da planilha no Google é **exatamente** `Controle Zeidan Parfum`.")
+    except:
         return None
 
-# --- FUNÇÕES ÚTEIS ---
-def pegar_hora_brasil():
-    fuso = pytz.timezone('America/Sao_Paulo')
-    return datetime.now(fuso)
-
-def limpar_numero(valor):
-    if not valor: return 0.0
-    if isinstance(valor, (int, float)): return float(valor)
-    valor = str(valor).replace("R$", "").replace(".", "").replace(",", ".")
+# --- CARREGAR DADOS ---
+@st.cache_data(ttl=60)
+def carregar_catalogo():
+    sheet = conectar_google_sheets()
+    if not sheet:
+        return pd.DataFrame()
     try:
-        return float(valor)
+        ws = sheet.worksheet("Produtos")
+        dados = ws.get_all_records()
+        df = pd.DataFrame(dados)
+        if "Produto" not in df.columns or "Preco_Venda" not in df.columns:
+            return pd.DataFrame()
+        return df
     except:
-        return 0.0
+        return pd.DataFrame()
 
-def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
-    try:
-        worksheet = sheet.worksheet(nome_aba)
-    except gspread.WorksheetNotFound:
-        # Cria a aba silenciosamente se não existir
-        worksheet = sheet.add_worksheet(title=nome_aba, rows=100, cols=20)
-        worksheet.append_row(colunas_esperadas)
-    
-    dados = worksheet.get_all_records()
-    df = pd.DataFrame(dados)
-    if df.empty:
-        df = pd.DataFrame(columns=colunas_esperadas)
-    else:
-        for col in colunas_esperadas:
-            if col not in df.columns:
-                df[col] = ""
-        if "ID" in df.columns:
-            df["ID"] = df["ID"].astype(str)
-    return df, worksheet
+# --- ÁREA DA LOGO (HTML DIRETO) - CLICÁVEL ---
+if os.path.exists("logo.png"):
+    with open("logo.png", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(
+        f'<a href="{HOME_URL}">'
+        f'<img src="data:image/png;base64,{data}" class="logo-img"></a>',
+        unsafe_allow_html=True,
+    )
 
-# --- INÍCIO DO APP ---
-st.title("📦 Sistema Zeidan Parfum")
+elif os.path.exists("logo.jpg"):
+    with open("logo.jpg", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(
+        f'<a href="{HOME_URL}">'
+        f'<img src="data:image/jpeg;base64,{data}" class="logo-img"></a>',
+        unsafe_allow_html=True,
+    )
 
-sheet = conectar_google_sheets()
+else:
+    st.markdown(
+        f"<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>"
+        f"<a href='{HOME_URL}' style='color:#d2d2d2; text-decoration:none;'>"
+        f"ZEIDAN PARFUM</a></h1>",
+        unsafe_allow_html=True,
+    )
 
-if sheet is None:
+# --- MENU DE MARCAS (ABAIXO DA LOGO) ---
+col_menu, col_vazio = st.columns([2, 3])
+with col_menu:
+    marca = st.selectbox(
+        "Marcas",
+        ["Todas", "Lattafa", "Armaf", "Zara", "Dior"],
+        index=0,
+    )
+
+# --- BARRA DE BUSCA (MAIS PERTO DA LOGO) ---
+st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
+
+c1, c2, c3 = st.columns([1, 4, 1])
+with c2:
+    busca = st.text_input(
+        "Busca Perfume",
+        placeholder="🔍 Digite o nome do perfume...",
+        label_visibility="collapsed",
+    )
+
+# --- CARREGAMENTO ---
+df = carregar_catalogo()
+
+if df.empty:
+    st.info("Carregando catálogo...")
     st.stop()
 
-# --- CARREGAMENTO DE DADOS ---
-cols_prod = ["ID", "Produto", "Custo_Padrao", "Preco_Venda"]
-cols_comp = ["Pedido", "Data", "Data_Chegada", "ID", "Produto", "Qtd", "Custo_Unit", "Fornecedor", "Status", "Observacoes"]
-cols_vend = ["Pedido", "ID", "Produto", "Status", "Custo", "Preco_Tabela", "Lucro_Dif", "Valor_Recebido", "Margem_Perc", "Data", "Plataforma", "Ponto_de_Contato", "Observacoes"]
+# filtro por marca (se existir coluna 'Marca' na planilha)
+if "Marca" in df.columns and marca != "Todas":
+    df = df[df["Marca"] == marca]
 
-try:
-    df_produtos, _ = _ler_dados_brutos(sheet, "Produtos", cols_prod)
-    df_compras, _ = _ler_dados_brutos(sheet, "Compras", cols_comp)
-    df_vendas, _ = _ler_dados_brutos(sheet, "Vendas", cols_vend)
-except Exception as e:
-    st.error(f"Erro crítico ao ler abas: {e}")
-    st.stop()
+# filtro por busca
+if busca:
+    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
-# --- MENU LATERAL ---
-menu = st.sidebar.radio("Menu", ["Vender", "Comprar", "Cadastrar Produto", "Relatórios"])
+# remove produtos sem preço
+df = df[df["Preco_Venda"] != ""]
 
-def gerar_id_venda(df_vendas):
-    if df_vendas is None or df_vendas.empty or "Pedido" not in df_vendas.columns: return "ZP01"
-    try:
-        lista = [x for x in df_vendas["Pedido"] if str(x).startswith("ZP")]
-        if not lista: return "ZP01"
-        ultimo = lista[-1]
-        numero = int(str(ultimo).replace("ZP", ""))
-        return f"ZP{numero + 1:02d}"
-    except: return "ZP??"
+st.markdown("<br>", unsafe_allow_html=True)
 
-def gerar_id_compra(df_compras):
-    if df_compras is None or df_compras.empty or "Pedido" not in df_compras.columns: return "CP01"
-    try:
-        lista = [x for x in df_compras["Pedido"] if str(x).startswith("CP")]
-        if not lista: return "CP01"
-        ultimo = lista[-1]
-        numero = int(str(ultimo).replace("CP", ""))
-        return f"CP{numero + 1:02d}"
-    except: return "CP??"
+# --- LIMPEZA DO ZAP ---
+zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# ================= TELA: VENDER =================
-if menu == "Vender":
-    st.header("💰 Nova Venda")
-    opcoes = df_produtos["ID"] + " - " + df_produtos["Produto"]
-    selecao = st.selectbox("Produto", opcoes) if not df_produtos.empty else None
-    sugestao = gerar_id_venda(df_vendas)
+# --- VITRINE (2 PRODUTOS POR LINHA + ZOOM NA IMAGEM) ---
+cols = st.columns(2)
 
-    if selecao:
-        id_sel = selecao.split(" - ")[0]
-        dados = df_produtos.loc[df_produtos["ID"] == id_sel].iloc[0]
-        
-        with st.form("venda"):
-            c1, c2, c3, c4 = st.columns(4)
-            ped = c1.text_input("Pedido", value=sugestao)
-            dt = c2.date_input("Data", pegar_hora_brasil(), format="DD/MM/YYYY")
-            stat = c3.selectbox("Status", ["Entregue", "Pendente", "Enviado"])
-            plat = c4.selectbox("Canal", ["Pessoalmente", "Instagram", "WhatsApp"])
-            
-            c5, c6 = st.columns(2)
-            val = c5.number_input("Valor Venda", value=limpar_numero(dados["Preco_Venda"]))
-            cus = c6.number_input("Custo", value=limpar_numero(dados["Custo_Padrao"]))
-            
-            c7, c8 = st.columns(2)
-            cli = c7.text_input("Cliente")
-            obs = c8.text_input("Obs")
-            
-            if st.form_submit_button("Confirmar Venda"):
-                lucro = val - cus
-                margem = (lucro / val) if val > 0 else 0
-                sheet.worksheet("Vendas").append_row([
-                    ped, id_sel, dados["Produto"], stat, cus, limpar_numero(dados["Preco_Venda"]),
-                    lucro, val, f"{margem:.2%}", dt.strftime("%d/%m/%Y"), plat, cli, obs
-                ])
-                st.success("✅ Venda Registrada!")
-                st.rerun()
+for index, row in df.iterrows():
+    with cols[index % 2]:
+        img_url = row.get("Imagem", "")
+        if not str(img_url).startswith("http"):
+            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
-# ================= TELA: COMPRAR =================
-elif menu == "Comprar":
-    st.header("🛒 Nova Compra")
-    opcoes = df_produtos["ID"] + " - " + df_produtos["Produto"]
-    selecao = st.selectbox("Item", opcoes) if not df_produtos.empty else None
-    sugestao = gerar_id_compra(df_compras)
+        preco = str(row['Preco_Venda']).replace("R$", "").strip()
 
-    if selecao:
-        id_sel = selecao.split(" - ")[0]
-        dados = df_produtos.loc[df_produtos["ID"] == id_sel].iloc[0]
-        
-        with st.form("compra"):
-            c1, c2, c3 = st.columns(3)
-            ped = c1.text_input("Pedido", value=sugestao)
-            dt = c2.date_input("Data Pedido", pegar_hora_brasil(), format="DD/MM/YYYY")
-            cheg = c3.date_input("Previsão Chegada", pegar_hora_brasil(), format="DD/MM/YYYY")
-            
-            c4, c5 = st.columns(2)
-            qtd = c4.number_input("Qtd", 1)
-            custo = c5.number_input("Custo Unit", value=limpar_numero(dados["Custo_Padrao"]))
-            
-            c6, c7 = st.columns(2)
-            forn = c6.selectbox("Fornecedor", ["Niche House", "Baroni Parfum", "Flowers", "Outro"])
-            stat = c7.selectbox("Status", ["Pedido Feito", "Aprovado", "Enviado", "Entregue"])
-            
-            obs = st.text_input("Obs")
-            
-            if st.form_submit_button("Registrar Compra"):
-                sheet.worksheet("Compras").append_row([
-                    ped, dt.strftime("%d/%m/%Y"), cheg.strftime("%d/%m/%Y"),
-                    id_sel, dados["Produto"], qtd, custo, forn, stat, obs
-                ])
-                st.success("✅ Compra Registrada!")
-                st.rerun()
+        msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
+        msg_encoded = msg.replace(" ", "%20")
+        link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
-# ================= TELA: CADASTRAR =================
-elif menu == "Cadastrar Produto":
-    st.header("✨ Novo Produto")
-    with st.form("new_prod"):
-        id_n = st.text_input("ID (Código)")
-        nome = st.text_input("Nome do Perfume")
-        c1, c2 = st.columns(2)
-        custo = c1.number_input("Custo Padrão", 0.0)
-        venda = c2.number_input("Preço Venda", 0.0)
-        
-        if st.form_submit_button("Salvar Produto"):
-            if id_n and nome:
-                sheet.worksheet("Produtos").append_row([id_n, nome, custo, venda])
-                st.success("✅ Produto Criado!")
-                st.rerun()
-            else:
-                st.warning("Preencha ID e Nome!")
-
-# ================= TELA: RELATÓRIOS =================
-elif menu == "Relatórios":
-    st.header("📊 Painel Gerencial")
-    tab1, tab2 = st.tabs(["Vendas", "Compras"])
-    
-    with tab1:
-        if df_vendas is not None and not df_vendas.empty:
-            df_vendas['Data_Obj'] = pd.to_datetime(df_vendas['Data'], format='%d/%m/%Y', errors='coerce')
-            mes_atual = pegar_hora_brasil().month
-            vendas_mes = df_vendas[df_vendas['Data_Obj'].dt.month == mes_atual]
-            if not vendas_mes.empty:
-                total_mes = vendas_mes["Valor_Recebido"].apply(limpar_numero).sum()
-                st.metric(f"Faturamento Mês {mes_atual}", f"R$ {total_mes:,.2f}")
-            st.dataframe(df_vendas.drop(columns=['Data_Obj'], errors='ignore'), hide_index=True, use_container_width=True)
-        else: st.info("Sem histórico de vendas.")
-        
-    with tab2:
-        if df_compras is not None and not df_compras.empty:
-            st.dataframe(df_compras, hide_index=True, use_container_width=True)
-        else: st.info("Sem histórico de compras.")
+        st.markdown(f"""
+        <div class="product-card">
+            <a href="{img_url}" target="_blank"
+               style="height: 250px; display: flex; align-items: center; justify-content: center;
+                      background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
+                <img src="{img_url}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </a>
+            <div>
+                <div class="prod-title">{row['Produto']}</div>
+                <div class="price-tag">R$ {preco}</div>
+                <a href="{link_zap}" target="_blank" class="zap-btn">
+                    💎 Encomendar
+                </a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
