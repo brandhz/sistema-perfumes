@@ -173,7 +173,7 @@ with col_menu:
     marca = st.selectbox(
         "Marcas",
         [
-            "Todas",
+            "TODAS",
             "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
             "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
             "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
@@ -191,22 +191,16 @@ with col_menu:
         index=0,
     )
 
-# --- BARRA DE BUSCA + BOTÃO INÍCIO ---
+# --- BARRA DE BUSCA ---
 st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
 
-c1, c2, c3, c4 = st.columns([0.5, 3, 1, 0.5])
-
+c1, c2, c3 = st.columns([1, 4, 1])
 with c2:
     busca = st.text_input(
         "Busca Perfume",
         placeholder="🔍 Digite o nome do perfume...",
         label_visibility="collapsed",
     )
-
-with c3:
-    if st.button("Início"):
-        # só recarrega, o selectbox volta para o index 0 (Todas)
-        st.rerun()
 
 # --- CARREGAMENTO ---
 df = carregar_catalogo()
