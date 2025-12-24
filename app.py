@@ -117,5 +117,119 @@ def gerar_id_venda(df_vendas):
 def gerar_id_compra(df_compras):
     if df_compras is None or df_compras.empty or "Pedido" not in df_compras.columns: return "CP01"
     try:
-        lista = [x for x in df_compras["Pedido"] if str(x)
+        lista = [x for x in df_compras["Pedido"] if str(x).startswith("CP")]
+        if not lista: return "CP01"
+        ultimo = lista[-1]
+        numero = int(str(ultimo).replace("CP", ""))
+        return f"CP{numero + 1:02d}"
+    except: return "CP??"
 
+# ================= TELA: VENDER =================
+if menu == "Vender":
+    st.header("💰 Nova Venda")
+    opcoes = df_produtos["ID"] + " - " + df_produtos["Produto"]
+    selecao = st.selectbox("Produto", opcoes) if not df_produtos.empty else None
+    sugestao = gerar_id_venda(df_vendas)
+
+    if selecao:
+        id_sel = selecao.split(" - ")[0]
+        dados = df_produtos.loc[df_produtos["ID"] == id_sel].iloc[0]
+        
+        with st.form("venda"):
+            c1, c2, c3, c4 = st.columns(4)
+            ped = c1.text_input("Pedido", value=sugestao)
+            dt = c2.date_input("Data", pegar_hora_brasil(), format="DD/MM/YYYY")
+            stat = c3.selectbox("Status", ["Entregue", "Pendente", "Enviado"])
+            plat = c4.selectbox("Canal", ["Pessoalmente", "Instagram", "WhatsApp"])
+            
+            c5, c6 = st.columns(2)
+            val = c5.number_input("Valor Venda", value=limpar_numero(dados["Preco_Venda"]))
+            cus = c6.number_input("Custo", value=limpar_numero(dados["Custo_Padrao"]))
+            
+            c7, c8 = st.columns(2)
+            cli = c7.text_input("Cliente")
+            obs = c8.text_input("Obs")
+            
+            if st.form_submit_button("Confirmar Venda"):
+                lucro = val - cus
+                margem = (lucro / val) if val > 0 else 0
+                sheet.worksheet("Vendas").append_row([
+                    ped, id_sel, dados["Produto"], stat, cus, limpar_numero(dados["Preco_Venda"]),
+                    lucro, val, f"{margem:.2%}", dt.strftime("%d/%m/%Y"), plat, cli, obs
+                ])
+                st.success("✅ Venda Registrada!")
+                st.rerun()
+
+# ================= TELA: COMPRAR =================
+elif menu == "Comprar":
+    st.header("🛒 Nova Compra")
+    opcoes = df_produtos["ID"] + " - " + df_produtos["Produto"]
+    selecao = st.selectbox("Item", opcoes) if not df_produtos.empty else None
+    sugestao = gerar_id_compra(df_compras)
+
+    if selecao:
+        id_sel = selecao.split(" - ")[0]
+        dados = df_produtos.loc[df_produtos["ID"] == id_sel].iloc[0]
+        
+        with st.form("compra"):
+            c1, c2, c3 = st.columns(3)
+            ped = c1.text_input("Pedido", value=sugestao)
+            dt = c2.date_input("Data Pedido", pegar_hora_brasil(), format="DD/MM/YYYY")
+            cheg = c3.date_input("Previsão Chegada", pegar_hora_brasil(), format="DD/MM/YYYY")
+            
+            c4, c5 = st.columns(2)
+            qtd = c4.number_input("Qtd", 1)
+            custo = c5.number_input("Custo Unit", value=limpar_numero(dados["Custo_Padrao"]))
+            
+            c6, c7 = st.columns(2)
+            forn = c6.selectbox("Fornecedor", ["Niche House", "Baroni Parfum", "Flowers", "Outro"])
+            stat = c7.selectbox("Status", ["Pedido Feito", "Aprovado", "Enviado", "Entregue"])
+            
+            obs = st.text_input("Obs")
+            
+            if st.form_submit_button("Registrar Compra"):
+                sheet.worksheet("Compras").append_row([
+                    ped, dt.strftime("%d/%m/%Y"), cheg.strftime("%d/%m/%Y"),
+                    id_sel, dados["Produto"], qtd, custo, forn, stat, obs
+                ])
+                st.success("✅ Compra Registrada!")
+                st.rerun()
+
+# ================= TELA: CADASTRAR =================
+elif menu == "Cadastrar Produto":
+    st.header("✨ Novo Produto")
+    with st.form("new_prod"):
+        id_n = st.text_input("ID (Código)")
+        nome = st.text_input("Nome do Perfume")
+        c1, c2 = st.columns(2)
+        custo = c1.number_input("Custo Padrão", 0.0)
+        venda = c2.number_input("Preço Venda", 0.0)
+        
+        if st.form_submit_button("Salvar Produto"):
+            if id_n and nome:
+                sheet.worksheet("Produtos").append_row([id_n, nome, custo, venda])
+                st.success("✅ Produto Criado!")
+                st.rerun()
+            else:
+                st.warning("Preencha ID e Nome!")
+
+# ================= TELA: RELATÓRIOS =================
+elif menu == "Relatórios":
+    st.header("📊 Painel Gerencial")
+    tab1, tab2 = st.tabs(["Vendas", "Compras"])
+    
+    with tab1:
+        if df_vendas is not None and not df_vendas.empty:
+            df_vendas['Data_Obj'] = pd.to_datetime(df_vendas['Data'], format='%d/%m/%Y', errors='coerce')
+            mes_atual = pegar_hora_brasil().month
+            vendas_mes = df_vendas[df_vendas['Data_Obj'].dt.month == mes_atual]
+            if not vendas_mes.empty:
+                total_mes = vendas_mes["Valor_Recebido"].apply(limpar_numero).sum()
+                st.metric(f"Faturamento Mês {mes_atual}", f"R$ {total_mes:,.2f}")
+            st.dataframe(df_vendas.drop(columns=['Data_Obj'], errors='ignore'), hide_index=True, use_container_width=True)
+        else: st.info("Sem histórico de vendas.")
+        
+    with tab2:
+        if df_compras is not None and not df_compras.empty:
+            st.dataframe(df_compras, hide_index=True, use_container_width=True)
+        else: st.info("Sem histórico de compras.")
