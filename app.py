@@ -1,3 +1,53 @@
+# ==========================================
+# 🚨 ÁREA DE DIAGNÓSTICO DE EMERGÊNCIA 🚨
+# (Cole isso logo após st.set_page_config)
+# ==========================================
+import json
+try:
+    st.divider()
+    st.markdown("### 🕵️ Diagnóstico do Robô")
+    
+    # 1. Verifica se os secrets existem
+    if "CREDENCIAIS_JSON" not in st.secrets:
+        st.error("❌ ERRO: Não encontrei 'CREDENCIAIS_JSON' nos Secrets!")
+    else:
+        # 2. Tenta ler quem é o robô
+        info = json.loads(st.secrets["CREDENCIAIS_JSON"], strict=False)
+        email_robo = info.get("client_email", "Não encontrado")
+        st.info(f"🤖 **Eu sou o robô:** `{email_robo}`")
+        st.write("👆 **Atenção:** Copie esse e-mail acima e verifique se ele está na planilha!")
+
+        # 3. Tenta conectar no Google Drive para listar arquivos
+        from oauth2client.service_account import ServiceAccountCredentials
+        import gspread
+        
+        scope_diag = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds_diag = ServiceAccountCredentials.from_json_keyfile_dict(info, scope_diag)
+        client_diag = gspread.authorize(creds_diag)
+        
+        # Tenta listar as planilhas que ele vê
+        st.write("📂 **Tentando listar arquivos que eu vejo...**")
+        lista = client_diag.list_spreadsheet_files()
+        
+        if not lista:
+            st.error("🚫 O robô conectou, mas não vê NENHUMA planilha. (Causas: API Drive desligada ou falta de compartilhamento)")
+        else:
+            encontrei = False
+            for arq in lista:
+                st.success(f"✅ Vejo: {arq['name']} (ID: {arq['id']})")
+                if "1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZNWaV-k" in arq['id']:
+                    encontrei = True
+                    st.balloons()
+                    st.success("🎉 ACHEI A SUA PLANILHA! O acesso está liberado!")
+            
+            if not encontrei:
+                st.warning("⚠️ Vejo algumas planilhas, mas NÃO a do Zeidan Parfum. Verifique o compartilhamento.")
+
+    st.divider()
+except Exception as e:
+    st.error(f"❌ O diagnóstico falhou: {e}")
+    st.warning("DICA: Se o erro for 'accessNotConfigured', você precisa ativar as APIs do Google Drive e Sheets no console do Google Cloud.")
+# ==========================================
 import streamlit as st
 import pandas as pd
 import gspread
@@ -314,4 +364,5 @@ try:
                 
 except Exception as e:
     st.error(f"Erro no teste: {e}")
+
 
