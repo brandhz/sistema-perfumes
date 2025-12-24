@@ -59,7 +59,8 @@ def conectar_google_sheets():
         
         if creds:
             client = gspread.authorize(creds)
-            return client.open_by_url(URL_PLANILHA)
+            id_planilha = URL_PLANILHA.split("/d/")[1].split("/")[0]
+return client.open_by_key(id_planilha)
         else:
             st.error("❌ Erro: Credenciais não encontradas. Verifique se colou o bloco CREDENCIAIS_JSON nos Secrets.")
             return None
@@ -280,3 +281,4 @@ try:
         st.info("👆 Copie esse e-mail acima, vá na sua planilha > Compartilhar > Cole ele lá como Editor.")
 except:
     st.error("Não consegui ler o e-mail do robô nos secrets.")
+
