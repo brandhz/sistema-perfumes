@@ -151,13 +151,30 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- LOGO USANDO st.logo (CLICA E VOLTA SEM ABRIR ABA) ---
+# --- LOGO HTML: CLICA E VOLTA NA MESMA ABA (href="/") ---
 if os.path.exists("logo.png"):
-    st.logo("logo.png", link="/")
+    with open("logo.png", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(
+        f'<a href="/"><img src="data:image/png;base64,{data}" '
+        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;"></a>',
+        unsafe_allow_html=True,
+    )
 elif os.path.exists("logo.jpg"):
-    st.logo("logo.jpg", link="/")
+    with open("logo.jpg", "rb") as f:
+        data = base64.b64encode(f.read()).decode("utf-8")
+    st.markdown(
+        f'<a href="/"><img src="data:image/jpeg;base64,{data}" '
+        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;"></a>',
+        unsafe_allow_html=True,
+    )
 else:
-    st.title("ZEIDAN PARFUM")
+    st.markdown(
+        "<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>"
+        "<a href='/' style='color:#d2d2d2; text-decoration:none;'>ZEIDAN PARFUM</a>"
+        "</h1>",
+        unsafe_allow_html=True,
+    )
 
 # --- MENU DE MARCAS (ABAIXO DA LOGO) ---
 col_menu, col_vazio = st.columns([2, 3])
