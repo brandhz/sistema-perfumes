@@ -28,6 +28,7 @@ st.markdown("""
         color: #FFFFFF;
     }
 
+    /* Barra de Busca - específica para o campo desta página */
     .stTextInput input[aria-label="Busca Perfume"] {
         color: #162d48;
         background-color: #d2d2d2;
@@ -39,6 +40,7 @@ st.markdown("""
         font-size: 16px;
     }
     
+    /* Cartão do Produto */
     .product-card {
         background-color: #233e58;
         padding: 20px;
@@ -144,7 +146,34 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- LOGO ESTÁTICA ---
+# ====================== CABEÇALHO ESTILO PRINT ======================
+
+# 1) "Menu" de marcas no topo (simulando um hambúrguer)
+with st.container():
+    col_menu, col_logo_placeholder = st.columns([1, 4])
+    with col_menu:
+        menu_marca = st.selectbox(
+            "Menu",
+            [
+                "Todas",
+                "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
+                "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
+                "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
+                "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR",
+                "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE",
+                "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO",
+                "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER",
+                "LANCÔME", "LATTAFA", "MAISON ALHAMBRA",
+                "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF",
+                "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE",
+                "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY",
+                "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
+                "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
+            ],
+            index=0,
+        )
+
+# 2) Logo centralizada grande
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
@@ -167,33 +196,7 @@ else:
         unsafe_allow_html=True,
     )
 
-# --- MENU DE MARCAS ---
-col_menu, col_vazio = st.columns([2, 3])
-with col_menu:
-    marca = st.selectbox(
-        "Marcas",
-        [
-            "TODAS",
-            "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
-            "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
-            "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
-            "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR",
-            "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE",
-            "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO",
-            "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER",
-            "LANCÔME", "LATTAFA", "MAISON ALHAMBRA",
-            "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF",
-            "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE",
-            "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY",
-            "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
-            "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
-        ],
-        index=0,
-    )
-
-# --- BARRA DE BUSCA ---
-st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
-
+# 3) Barra de busca abaixo da logo
 c1, c2, c3 = st.columns([1, 4, 1])
 with c2:
     busca = st.text_input(
@@ -202,19 +205,23 @@ with c2:
         label_visibility="collapsed",
     )
 
-# --- CARREGAMENTO ---
+# ====================== CATÁLOGO ======================
+
 df = carregar_catalogo()
 
 if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-if "Marca" in df.columns and marca != "TODAS":
-    df = df[df["Marca"] == marca]
+# Filtro por marca (se existir coluna 'Marca')
+if "Marca" in df.columns and menu_marca != "Todas":
+    df = df[df["Marca"] == menu_marca]
 
+# Filtro por busca
 if busca:
     df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
+# Remove produtos sem preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -222,7 +229,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE ---
+# --- VITRINE EM 2 COLUNAS ---
 cols = st.columns(2)
 
 for index, row in df.iterrows():
