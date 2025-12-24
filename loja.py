@@ -10,11 +10,11 @@ import base64
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
 # ==============================================================================
-# 👇👇👇 SEU WHATSAPP AQUI 👇👇👇
+# 👇 SEU WHATSAPP AQUI
 NUMERO_ZAP = "5531991668430" 
 # ==============================================================================
 
-# --- ESTILO VISUAL (CSS MONTSERRAT + LOGO CENTRALIZADA) ---
+# --- ESTILO VISUAL (CSS MONTSERRAT + CORREÇÃO DA LOGO) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
@@ -68,7 +68,7 @@ st.markdown("""
         font-size: 16px;
         font-weight: 700;
         margin: 15px 0 10px 0;
-        min-height: 50px; /* Altura fixa para alinhar */
+        min-height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -108,25 +108,22 @@ st.markdown("""
         box-shadow: 0 5px 20px rgba(37, 211, 102, 0.5);
     }
     
-    /* Remove espaço extra do topo */
+    /* Espaçamento do container principal */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 5rem;
     }
     
-    /* Centralizador da Logo (Container Flex) */
-    .logo-container {
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        width: 100%; 
-        margin-bottom: 30px;
-    }
-    
+    /* --- CORREÇÃO DA LOGO --- */
+    /* Isso força a imagem a ser um bloco centralizado com tamanho fixo */
     .logo-img {
-        max-width: 350px; 
-        width: 80%; 
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        width: 250px; /* Tamanho fixo ideal */
+        max-width: 80%; /* Segurança pra celular muito pequeno */
         height: auto;
+        padding-bottom: 20px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -162,10 +159,8 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- HEADER E LOGO (AGORA 100% CENTRALIZADO) ---
-# Usamos HTML direto com Flexbox para garantir o centro
-st.markdown('<div class="logo-container">', unsafe_allow_html=True)
-
+# --- ÁREA DA LOGO (HTML DIRETO) ---
+# Removemos colunas do Streamlit para usar CSS puro na logo
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
@@ -179,7 +174,6 @@ elif os.path.exists("logo.jpg"):
 else:
     st.markdown("<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>ZEIDAN PARFUM</h1>", unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)
 
 # --- BARRA DE BUSCA ---
 c1, c2, c3 = st.columns([1, 4, 1])
@@ -221,7 +215,7 @@ for index, row in df.iterrows():
         msg_encoded = msg.replace(" ", "%20")
         link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
-        # Card HTML
+        # Card HTML (Fundo Branco na área da imagem para destacar frasco)
         st.markdown(f"""
         <div class="product-card">
             <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
