@@ -195,7 +195,7 @@ for index, row in df.iterrows():
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
         
         # --- SEU NÚMERO ---
-        TEL_ZEIDAN = "5531999999999" 
+        TEL_ZEIDAN = "5531991668430" "5531971789632" 
         
         msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
         msg_encoded = msg.replace(" ", "%20")
@@ -213,4 +213,4 @@ for index, row in df.iterrows():
                 💎 Encomendar
             </a>
         </div>
-        """, unsafe_allow_html=
+        """, unsafe_allow_html=True)
