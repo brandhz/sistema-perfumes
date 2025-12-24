@@ -14,12 +14,6 @@ st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="w
 NUMERO_ZAP = "5531991668430"
 # ======================================================================
 
-# --- ESTADO INICIAL DOS FILTROS ---
-if "marca" not in st.session_state:
-    st.session_state["marca"] = "Todas"
-if "busca" not in st.session_state:
-    st.session_state["busca"] = ""
-
 # --- ESTILO VISUAL ---
 st.markdown("""
 <style>
@@ -173,9 +167,7 @@ else:
         unsafe_allow_html=True,
     )
 
-# --- MENU DE MARCAS (SEM teclado extra) ---
-# Infelizmente o popup de teclado ao abrir selectbox no mobile é um bug conhecido
-# do Streamlit e não há como desativar totalmente hoje. [web:138]
+# --- MENU DE MARCAS ---
 col_menu, col_vazio = st.columns([2, 3])
 with col_menu:
     marca = st.selectbox(
@@ -196,28 +188,10 @@ with col_menu:
             "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
             "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
         ],
-        index=[
-            "Todas",
-            "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
-            "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
-            "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
-            "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR",
-            "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE",
-            "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO",
-            "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER",
-            "LANCÔME", "LATTAFA", "MAISON ALHAMBRA",
-            "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF",
-            "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE",
-            "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY",
-            "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
-            "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
-        ].index(st.session_state["marca"]),
-        key="marca",
+        index=0,
     )
 
-st.session_state["marca"] = marca
-
-# --- BARRA DE BUSCA + BOTÃO LIMPAR ---
+# --- BARRA DE BUSCA + BOTÃO INÍCIO ---
 st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
 
 c1, c2, c3, c4 = st.columns([0.5, 3, 1, 0.5])
@@ -227,13 +201,11 @@ with c2:
         "Busca Perfume",
         placeholder="🔍 Digite o nome do perfume...",
         label_visibility="collapsed",
-        key="busca",
     )
 
 with c3:
     if st.button("Início"):
-        st.session_state["marca"] = "Todas"
-        st.session_state["busca"] = ""
+        # só recarrega, o selectbox volta para o index 0 (Todas)
         st.rerun()
 
 # --- CARREGAMENTO ---
@@ -243,11 +215,11 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-if "Marca" in df.columns and st.session_state["marca"] != "Todas":
-    df = df[df["Marca"] == st.session_state["marca"]]
+if "Marca" in df.columns and marca != "Todas":
+    df = df[df["Marca"] == marca]
 
-if st.session_state["busca"]:
-    df = df[df["Produto"].astype(str).str.contains(st.session_state["busca"], case=False)]
+if busca:
+    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
 df = df[df["Preco_Venda"] != ""]
 
