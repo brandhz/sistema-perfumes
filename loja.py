@@ -16,7 +16,7 @@ NUMERO_ZAP = "5531991668430"
 HOME_URL = "https://zeidanparfum.streamlit.app"
 # ======================================================================
 
-# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT) ---
+# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT BEM SIMPLES) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
@@ -48,7 +48,7 @@ st.markdown("""
         background-color: #233e58;
         padding: 20px;
         border-radius: 20px;
-        margin: 10px;
+        margin-bottom: 30px;
         text-align: center;
         border: 1px solid rgba(210, 210, 210, 0.1);
         transition: all 0.3s ease;
@@ -125,33 +125,6 @@ st.markdown("""
         max-width: 80%;
         height: auto;
         padding-bottom: 20px;
-    }
-
-    /* GRID DOS PRODUTOS: 2 por linha */
-    .products-grid {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-left: -10px;
-        margin-right: -10px;
-    }
-
-    .product-wrapper {
-        box-sizing: border-box;
-        width: 50%;
-        padding: 5px;
-    }
-
-    @media (max-width: 480px) {
-        .product-wrapper {
-            width: 50%;
-        }
-    }
-
-    @media (min-width: 900px) {
-        .product-wrapper {
-            width: 25%; /* opcional: 4 por linha em telas grandes */
-        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -276,22 +249,22 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE (GRID 2 POR LINHA COM HTML PURO) ---
-cards_html = ['<div class="products-grid">']
+# --- VITRINE (st.columns(2) + clique abre maior) ---
+cols = st.columns(2)
 
-for _, row in df.iterrows():
-    img_url = row.get("Imagem", "")
-    if not str(img_url).startswith("http"):
-        img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
+for index, row in df.iterrows():
+    with cols[index % 2]:
+        img_url = row.get("Imagem", "")
+        if not str(img_url).startswith("http"):
+            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
-    preco = str(row['Preco_Venda']).replace("R$", "").strip()
+        preco = str(row['Preco_Venda']).replace("R$", "").strip()
 
-    msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
-    msg_encoded = msg.replace(" ", "%20")
-    link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
+        msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
+        msg_encoded = msg.replace(" ", "%20")
+        link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
-    card = f"""
-    <div class="product-wrapper">
+        st.markdown(f"""
         <div class="product-card">
             <a href="{img_url}" target="_blank"
                style="height: 250px; display: flex; align-items: center; justify-content: center;
@@ -306,10 +279,4 @@ for _, row in df.iterrows():
                 </a>
             </div>
         </div>
-    </div>
-    """
-    cards_html.append(card)
-
-cards_html.append("</div>")
-
-st.markdown("".join(cards_html), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
