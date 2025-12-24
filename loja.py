@@ -4,92 +4,99 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
+import base64
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
 # ==============================================================================
-# 👇👇👇 CONFIGURAÇÃO DO WHATSAPP (JÁ ATUALIZADO) 👇👇👇
+# 👇👇👇 SEU WHATSAPP AQUI 👇👇👇
 NUMERO_ZAP = "5531991668430" 
 # ==============================================================================
 
-# --- ESTILO VISUAL (CSS) ---
+# --- ESTILO VISUAL (CSS MONTSERRAT + LOGO CENTRALIZADA) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Montserrat', sans-serif;
     }
     
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Montserrat', sans-serif !important;
-        font-weight: 700;
-    }
-
+    /* Fundo */
     .stApp {
         background-color: #162d48;
         color: #FFFFFF;
     }
 
+    /* Barra de Busca */
     .stTextInput > div > div > input {
         color: #162d48;
         background-color: #d2d2d2;
-        border-radius: 25px;
+        border-radius: 30px;
         border: none;
-        padding: 12px 20px;
+        padding: 15px 25px;
         font-family: 'Montserrat', sans-serif;
         font-weight: 600;
+        font-size: 16px;
     }
     
+    /* Cartão do Produto */
     .product-card {
         background-color: #233e58;
         padding: 20px;
-        border-radius: 16px;
-        margin-bottom: 25px;
+        border-radius: 20px;
+        margin-bottom: 30px;
         text-align: center;
         border: 1px solid rgba(210, 210, 210, 0.1);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
     }
     
     .product-card:hover {
         transform: translateY(-5px);
         border-color: #d2d2d2;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.5);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.4);
     }
 
+    /* Título do Perfume */
     .prod-title {
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 700;
         margin: 15px 0 10px 0;
-        min-height: 45px;
+        min-height: 50px; /* Altura fixa para alinhar */
         display: flex;
         align-items: center;
         justify-content: center;
         color: #FFFFFF;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        line-height: 1.2;
+        letter-spacing: 1px;
+        line-height: 1.3;
     }
 
+    /* Preço */
     .price-tag {
-        font-size: 22px;
+        font-size: 24px;
         color: #d2d2d2;
-        font-weight: 700;
+        font-weight: 800;
         margin-bottom: 15px;
         border-top: 1px solid rgba(210,210,210, 0.1);
-        padding-top: 10px;
+        padding-top: 15px;
     }
 
+    /* Botão do WhatsApp */
     a.zap-btn {
-        display: inline-block;
+        display: block;
         width: 100%;
-        padding: 14px;
-        background: linear-gradient(90deg, #25D366, #128C7E);
+        padding: 12px;
+        background: linear-gradient(135deg, #25D366, #128C7E);
         color: white !important;
         text-decoration: none;
-        border-radius: 30px;
+        border-radius: 50px;
         font-weight: 700;
         font-size: 14px;
         text-transform: uppercase;
@@ -97,12 +104,29 @@ st.markdown("""
         transition: transform 0.2s, box-shadow 0.2s;
     }
     a.zap-btn:hover {
-        transform: scale(1.03);
-        box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
+        transform: scale(1.05);
+        box-shadow: 0 5px 20px rgba(37, 211, 102, 0.5);
     }
     
+    /* Remove espaço extra do topo */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 2rem;
+        padding-bottom: 5rem;
+    }
+    
+    /* Centralizador da Logo (Container Flex) */
+    .logo-container {
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        width: 100%; 
+        margin-bottom: 30px;
+    }
+    
+    .logo-img {
+        max-width: 350px; 
+        width: 80%; 
+        height: auto;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -138,34 +162,28 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- HEADER E LOGO CENTRALIZADOS (FLEXBOX) ---
-# Usamos apenas uma coluna e forçamos o centro com HTML/CSS
-st.markdown("""
-    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
-""", unsafe_allow_html=True)
+# --- HEADER E LOGO (AGORA 100% CENTRALIZADO) ---
+# Usamos HTML direto com Flexbox para garantir o centro
+st.markdown('<div class="logo-container">', unsafe_allow_html=True)
 
 if os.path.exists("logo.png"):
-    # Lê a imagem em binário para exibir via HTML (truque para centralizar)
-    import base64
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(f'<img src="data:image/png;base64,{data}" style="width: 350px; max-width: 80%;">', unsafe_allow_html=True)
+    st.markdown(f'<img src="data:image/png;base64,{data}" class="logo-img">', unsafe_allow_html=True)
 
 elif os.path.exists("logo.jpg"):
-    import base64
     with open("logo.jpg", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(f'<img src="data:image/jpeg;base64,{data}" style="width: 350px; max-width: 80%;">', unsafe_allow_html=True)
+    st.markdown(f'<img src="data:image/jpeg;base64,{data}" class="logo-img">', unsafe_allow_html=True)
 
 else:
-    # Texto caso não tenha imagem
-    st.markdown("<div style='text-align: center;'><h1 style='color:#d2d2d2; font-size: 60px;'>ZEIDAN</h1><h3 style='color:#fff;'>PARFUM</h3></div>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>ZEIDAN PARFUM</h1>", unsafe_allow_html=True)
 
-st.markdown("</div>", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- BARRA DE BUSCA ---
-c_busca1, c_busca2, c_busca3 = st.columns([1, 4, 1])
-with c_busca2:
+c1, c2, c3 = st.columns([1, 4, 1])
+with c2:
     busca = st.text_input("", placeholder="🔍 Digite o nome do perfume...")
 
 # --- CARREGAMENTO ---
@@ -182,8 +200,7 @@ df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- LIMPEZA DO NÚMERO (GARANTIA) ---
-# Remove qualquer coisa que não seja número (espaços, traços, etc)
+# --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
 # --- VITRINE ---
@@ -191,28 +208,31 @@ cols = st.columns(3)
 
 for index, row in df.iterrows():
     with cols[index % 3]:
+        # Imagem
         img_url = row.get("Imagem", "")
+        # Se estiver vazio ou não for link, usa genérico
         if not str(img_url).startswith("http"):
             img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
         
-        # Cria a mensagem
+        # Link Zap
         msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
         msg_encoded = msg.replace(" ", "%20")
-        
-        # Gera o link usando o número limpo
         link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
+        # Card HTML
         st.markdown(f"""
         <div class="product-card">
-            <div style="height: 220px; overflow: hidden; border-radius: 10px; margin-bottom: 15px; background-color: #fff;">
-                <img src="{img_url}" style="width: 100%; height: 100%; object-fit: contain;">
+            <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
+                <img src="{img_url}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
             </div>
-            <div class="prod-title">{row['Produto']}</div>
-            <div class="price-tag">R$ {preco}</div>
-            <a href="{link_zap}" target="_blank" class="zap-btn">
-                💎 Encomendar
-            </a>
+            <div>
+                <div class="prod-title">{row['Produto']}</div>
+                <div class="price-tag">R$ {preco}</div>
+                <a href="{link_zap}" target="_blank" class="zap-btn">
+                    💎 Encomendar
+                </a>
+            </div>
         </div>
         """, unsafe_allow_html=True)
