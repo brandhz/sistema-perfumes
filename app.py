@@ -5,22 +5,51 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pytz
 import json
+import os  # <--- NOVA IMPORTAÇÃO NECESSÁRIA
+from dotenv import load_dotenv  # <--- NOVA IMPORTAÇÃO NECESSÁRIA
 
-# --- CONFIGURAÇÃO ---
+# -----------------------------------------------------------
+# CARREGA AS CONFIGURAÇÕES DE SEGURANÇA (.env)
+# -----------------------------------------------------------
+load_dotenv()
+
+# Configuração da página (Mantendo sua configuração original)
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
-# --- SENHA DE PROTEÇÃO (PIN) ---
-# Como o repo é público, isso impede estranhos de mexerem
+# -----------------------------------------------------------
+# SISTEMA DE LOGIN (AGORA SEGURO)
+# -----------------------------------------------------------
+# Pega a senha do arquivo .env em vez de deixá-la no código
+senha_secreta = os.getenv("SENHA_ACESSO")
+
+# Verifica se você criou o arquivo .env corretamente
+if not senha_secreta:
+    st.error("ERRO: Senha não encontrada! Verifique se o arquivo .env existe e tem a variável SENHA_ACESSO.")
+    st.stop()
+
+# Campo para digitar a senha
 senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
-if senha != "130712":
+
+# Verifica se a senha digitada bate com a senha do arquivo .env
+if senha != senha_secreta:
     st.warning("Por favor, digite a senha para acessar o sistema.")
     st.stop()
 
-# 🔗 SUA URL
-URL_PLANILHA = "https://docs.google.com/spreadsheets/d/1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZnWaV-k/edit?gid=1032083161#gid=1032083161"
+# -----------------------------------------------------------
+# URL DA PLANILHA (AGORA SEGURA)
+# -----------------------------------------------------------
+# Pega o link do arquivo .env
+URL_PLANILHA = os.getenv("LINK_DA_PLANILHA")
 
-# --- FUNÇÕES ÚTEIS ---
+if not URL_PLANILHA:
+    st.error("ERRO: Link da planilha não encontrado! Verifique a variável LINK_DA_PLANILHA no .env.")
+    st.stop()
+
+# -----------------------------------------------------------
+# FUNÇÕES ÚTEIS
+# -----------------------------------------------------------
 def pegar_hora_brasil():
+    # Sua função original mantida
     fuso = pytz.timezone('America/Sao_Paulo')
     return datetime.now(fuso)
 
@@ -253,3 +282,4 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
+
