@@ -73,7 +73,7 @@ def conectar_google_sheets():
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
             
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(credenciais_dict, scope)
             client = gspread.authorize(creds)
             return client.open_by_url(URL_PLANILHA)
         else:
@@ -275,3 +275,4 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
+
