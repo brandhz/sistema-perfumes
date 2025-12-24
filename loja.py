@@ -16,7 +16,7 @@ NUMERO_ZAP = "5531991668430"
 HOME_URL = "https://zeidanparfum.streamlit.app"
 # ======================================================================
 
-# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT + ZOOM) ---
+# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
@@ -127,34 +127,17 @@ st.markdown("""
         padding-bottom: 20px;
     }
 
-    /* Forçar 2 colunas na vitrine (melhor comportamento no mobile) */
+    /* Forçar 2 colunas na vitrine (melhor no mobile) */
     [data-testid="column"] {
-        min-width: calc(50% - 1rem) !important;
+        flex: 1 1 calc(50% - 1rem) !important;
+        max-width: calc(50% - 1rem) !important;
     }
 
-    /* Container da imagem com zoom suave */
-    .img-hover-zoom {
-        height: 250px;
-        background: white;
-        border-radius: 15px;
-        overflow: hidden;
-        margin-bottom: 15px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Imagem com transição suave */
-    .prod-img {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-        transition: transform 0.4s ease;
-    }
-
-    /* Zoom leve no hover */
-    .img-hover-zoom:hover .prod-img {
-        transform: scale(1.08);
+    @media (max-width: 480px) {
+        [data-testid="column"] {
+            flex: 1 1 50% !important;
+            max-width: 50% !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -279,7 +262,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE (2 PRODUTOS POR LINHA + ZOOM SUAVE NA IMAGEM) ---
+# --- VITRINE (2 PRODUTOS POR LINHA / SEM ZOOM PARADO) ---
 cols = st.columns(2)
 
 for index, row in df.iterrows():
@@ -296,17 +279,5 @@ for index, row in df.iterrows():
 
         st.markdown(f"""
         <div class="product-card">
-            <div class="img-hover-zoom">
-                <a href="{img_url}" target="_blank">
-                    <img src="{img_url}" class="prod-img">
-                </a>
-            </div>
-            <div>
-                <div class="prod-title">{row['Produto']}</div>
-                <div class="price-tag">R$ {preco}</div>
-                <a href="{link_zap}" target="_blank" class="zap-btn">
-                    💎 Encomendar
-                </a>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            <a href="{img_url}" target="_blank"
+               style="height
