@@ -9,74 +9,78 @@ import os
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
 # --- ESTILO VISUAL (CSS) ---
-# Aqui acontece a mágica do design
 st.markdown("""
 <style>
-    /* Importando Fontes Elegantes do Google */
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600&display=swap');
+    /* Importando APENAS a Montserrat */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
-    /* 1. Fundo e Fontes Gerais */
-    .stApp {
-        background-color: #162d48; /* Azul Profundo (Fundo) */
-        color: #FFFFFF;
+    /* APLICANDO MONTSERRAT EM TUDO */
+    html, body, [class*="css"] {
         font-family: 'Montserrat', sans-serif;
     }
-
-    /* 2. Títulos (H1, H2, H3) com fonte Serifada (Estilo Dior/Vogue) */
-    h1, h2, h3, .prod-title {
-        font-family: 'Playfair Display', serif !important;
+    
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Montserrat', sans-serif !important;
+        font-weight: 700;
     }
 
-    /* 3. Ajuste da Barra de Busca */
+    /* Fundo e Cores */
+    .stApp {
+        background-color: #162d48; /* Azul Profundo */
+        color: #FFFFFF;
+    }
+
+    /* Barra de Busca */
     .stTextInput > div > div > input {
         color: #162d48;
-        background-color: #d2d2d2; /* Prata */
-        border-radius: 20px;
+        background-color: #d2d2d2;
+        border-radius: 25px; /* Mais arredondado */
         border: none;
-        padding: 10px 15px;
+        padding: 12px 20px;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 600;
     }
     
-    /* 4. Cartão do Produto */
+    /* Cartão do Produto */
     .product-card {
-        background-color: #233e58; /* Azul Médio */
-        padding: 15px;
-        border-radius: 12px;
+        background-color: #233e58;
+        padding: 20px;
+        border-radius: 16px;
         margin-bottom: 25px;
         text-align: center;
-        border: 1px solid rgba(210, 210, 210, 0.2); /* Borda prateada sutil */
+        border: 1px solid rgba(210, 210, 210, 0.1);
         transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
     
-    /* Efeito ao passar o mouse no card */
     .product-card:hover {
-        transform: translateY(-5px); /* Sobe um pouquinho */
-        border-color: #d2d2d2; /* Borda fica mais forte */
-        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        transform: translateY(-5px);
+        border-color: #d2d2d2;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.5);
     }
 
     /* Título do Perfume */
     .prod-title {
-        font-size: 18px;
-        font-weight: 400;
-        margin: 15px 0 5px 0;
-        min-height: 50px;
+        font-size: 16px;
+        font-weight: 600; /* Mais grosso */
+        margin: 15px 0 10px 0;
+        min-height: 45px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #FFFFFF;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
     }
 
     /* Preço */
     .price-tag {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 20px;
-        color: #d2d2d2; /* Prata */
-        font-weight: 300;
+        font-size: 22px;
+        color: #d2d2d2;
+        font-weight: 700;
         margin-bottom: 15px;
-        border-top: 1px solid rgba(210,210,210, 0.2);
+        border-top: 1px solid rgba(210,210,210, 0.1);
         padding-top: 10px;
     }
 
@@ -84,30 +88,30 @@ st.markdown("""
     a.zap-btn {
         display: inline-block;
         width: 100%;
-        padding: 12px;
-        background: linear-gradient(45deg, #25D366, #128C7E);
+        padding: 14px;
+        background: linear-gradient(90deg, #25D366, #128C7E);
         color: white !important;
         text-decoration: none;
-        border-radius: 25px; /* Botão redondinho */
-        font-weight: 600;
+        border-radius: 30px;
+        font-weight: 700;
         font-size: 14px;
-        letter-spacing: 0.5px;
-        transition: transform 0.2s;
         text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
     a.zap-btn:hover {
-        transform: scale(1.05);
-        opacity: 0.9;
+        transform: scale(1.03);
+        box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
     }
     
-    /* Remover margens extras do topo */
+    /* Remove espaço extra no topo */
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO (LÓGICA BLINDADA) ---
+# --- CONEXÃO ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -132,79 +136,75 @@ def carregar_catalogo():
         ws = sheet.worksheet("Produtos")
         dados = ws.get_all_records()
         df = pd.DataFrame(dados)
-        # Verifica se as colunas existem
         if "Produto" not in df.columns or "Preco_Venda" not in df.columns:
             return pd.DataFrame()
         return df
     except:
         return pd.DataFrame()
 
-# --- ÁREA DA LOGO E TÍTULO ---
-c1, c2, c3 = st.columns([1, 2, 1])
+# --- ÁREA DA LOGO (AJUSTADA PARA FICAR MAIOR) ---
+# Mudei a proporção das colunas: O meio agora é muito maior (6 partes)
+c1, c2, c3 = st.columns([1, 6, 1])
 
-with c2: # Coluna do meio (Centralizada)
-    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+with c2: 
+    st.markdown("<div style='text-align: center; margin-bottom: 20px;'>", unsafe_allow_html=True)
     
-    # Tenta carregar a logo (png ou jpg)
+    # Verifica a logo e define largura maior (350px)
     if os.path.exists("logo.png"):
-        st.image("logo.png", width=200) # Logo maior
+        st.image("logo.png", width=350) 
     elif os.path.exists("logo.jpg"):
-        st.image("logo.jpg", width=200)
+        st.image("logo.jpg", width=350)
     else:
-        # Se não tiver logo, mostra texto bonito
-        st.markdown("<h1 style='color:#d2d2d2; font-size: 50px;'>ZEIDAN</h1>", unsafe_allow_html=True)
-        st.markdown("<h3 style='color:#fff; letter-spacing: 4px; font-size: 18px;'>PARFUM</h3>", unsafe_allow_html=True)
+        # Texto caso não carregue a imagem
+        st.markdown("<h1 style='color:#d2d2d2; font-size: 60px; font-weight:800;'>ZEIDAN</h1>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color:#fff; letter-spacing: 5px; font-size: 20px;'>PARFUM</h3>", unsafe_allow_html=True)
     
     st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
 # --- BARRA DE BUSCA ---
-c_busca1, c_busca2, c_busca3 = st.columns([1, 2, 1])
+c_busca1, c_busca2, c_busca3 = st.columns([1, 4, 1])
 with c_busca2:
-    busca = st.text_input("", placeholder="🔍 Qual perfume você deseja hoje?")
+    busca = st.text_input("", placeholder="🔍 Digite o nome do perfume...")
 
 # --- CARREGAMENTO ---
 df = carregar_catalogo()
 
 if df.empty:
-    st.info("Carregando as melhores fragrâncias...")
+    st.info("Carregando catálogo...")
     st.stop()
 
 # --- FILTRAGEM ---
 if busca:
     df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
-# Remove produtos sem preço
+# Apenas produtos com preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- VITRINE (GRID) ---
-# Usamos container do Streamlit para ajustar responsividade
-cols = st.columns(3) # 3 colunas no desktop
+# --- VITRINE ---
+cols = st.columns(3)
 
 for index, row in df.iterrows():
     with cols[index % 3]:
         # Imagem
         img_url = row.get("Imagem", "")
         if not str(img_url).startswith("http"):
-            # Ícone elegante se não tiver foto
-            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png" 
+            img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
         
-        # --- SEU NÚMERO AQUI ---
-        TEL_ZEIDAN = "5531991668430" "5531971789632"
+        # --- SEU NÚMERO ---
+        TEL_ZEIDAN = "5531999999999" 
         
         msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
         msg_encoded = msg.replace(" ", "%20")
         link_zap = f"https://wa.me/{TEL_ZEIDAN}?text={msg_encoded}"
 
-        # HTML do Card
+        # Card
         st.markdown(f"""
         <div class="product-card">
-            <div style="height: 200px; overflow: hidden; border-radius: 8px; margin-bottom: 10px;">
+            <div style="height: 220px; overflow: hidden; border-radius: 10px; margin-bottom: 15px; background-color: #fff;">
                 <img src="{img_url}" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
             <div class="prod-title">{row['Produto']}</div>
@@ -213,4 +213,4 @@ for index, row in df.iterrows():
                 💎 Encomendar
             </a>
         </div>
-        """, unsafe_allow_html=True)
+        """, unsafe_allow_html=
