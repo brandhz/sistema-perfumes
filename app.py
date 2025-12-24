@@ -16,64 +16,40 @@ except:
 
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
-# --- FUNÇÃO DE SEGURANÇA ---
-def pegar_segredo(chave):
-    if chave in st.secrets:
-        return st.secrets[chave]
-    return os.getenv(chave)
-
-# --- LOGIN ---
-senha_secreta = pegar_segredo("SENHA_ACESSO")
-if not senha_secreta:
-    st.error("ERRO CRÍTICO: Senha não configurada! Verifique os 'Secrets'.")
-    st.stop()
-
+# --- LOGIN SIMPLES ---
+# (Simplifiquei para focar na conexão primeiro)
 senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
-if senha != str(senha_secreta):
-    st.warning("Por favor, digite a senha para acessar o sistema.")
+if senha != "12041995": # Senha fixa para teste
+    st.warning("Digite a senha correta (12041995) para entrar.")
     st.stop()
 
-# --- URL DA PLANILHA ---
-URL_PLANILHA = pegar_segredo("LINK_DA_PLANILHA")
-
-# --- CONEXÃO COM GOOGLE SHEETS ---
-@st.cache_resource
+# --- CONEXÃO COM GOOGLE SHEETS (MODO FORÇADO) ---
+# Removi o @st.cache_resource para obrigar ele a tentar conectar do zero toda vez
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     try:
-        creds = None
-        
         # 1. Tenta pegar do BLOCO JSON nos Secrets
         if "CREDENCIAIS_JSON" in st.secrets:
             info_json = st.secrets["CREDENCIAIS_JSON"]
             creds_dict = json.loads(info_json, strict=False)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        
-        # 2. Fallback: Tenta pegar arquivo local
-        elif os.path.exists("zeidan-parfum.json"):
-             creds = ServiceAccountCredentials.from_json_keyfile_name("zeidan-parfum.json", scope)
-        
-        if creds:
             client = gspread.authorize(creds)
-            # TENTA ABRIR PELO ID (Se você colocou só o ID no Secrets, ele usa direto)
-            if "/" not in URL_PLANILHA:
-                 return client.open_by_key(URL_PLANILHA)
             
-            # SE TIVER O LINK COMPLETO, TENTA LIMPAR
-            try:
-                if "/d/" in URL_PLANILHA:
-                    id_planilha = URL_PLANILHA.split("/d/")[1].split("/")[0]
-                    return client.open_by_key(id_planilha)
-                else:
-                    return client.open_by_url(URL_PLANILHA)
-            except Exception:
-                return client.open_by_url(URL_PLANILHA)
+            # --- AQUI ESTÁ A MÁGICA ---
+            # Estou colocando o ID direto aqui. Se funcionar, sabemos que o erro era no link.
+            ID_FIXO = "1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZNWaV-k"
+            
+            st.toast("Tentando abrir planilha...", icon="🔄")
+            return client.open_by_key(ID_FIXO)
+            
         else:
+            st.error("❌ ERRO: Secrets 'CREDENCIAIS_JSON' não encontrado.")
             return None
 
     except Exception as e:
-        st.error(f"❌ Erro de Conexão Detalhado: {e}")
+        st.error(f"❌ Erro de Conexão: {e}")
+        st.info("💡 DICA: Se o erro for 404, verifique se a 'Google Sheets API' está ativada no Google Cloud.")
         return None
 
 # --- FUNÇÕES ÚTEIS ---
@@ -109,26 +85,33 @@ def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
         worksheet.append_row(colunas_esperadas)
         return pd.DataFrame(columns=colunas_esperadas), worksheet
 
-# --- CARREGAMENTO DE DADOS ---
-@st.cache_data(ttl=10)
-def carregar_dados_cache():
-    sheet = conectar_google_sheets()
-    if not sheet: return None, None, None
-    
-    cols_prod = ["ID", "Produto", "Custo_Padrao", "Preco_Venda"]
-    cols_comp = ["Pedido", "Data", "Data_Chegada", "ID", "Produto", "Qtd", "Custo_Unit", "Fornecedor", "Status", "Observacoes"]
-    cols_vend = ["Pedido", "ID", "Produto", "Status", "Custo", "Preco_Tabela", "Lucro_Dif", "Valor_Recebido", "Margem_Perc", "Data", "Plataforma", "Ponto_de_Contato", "Observacoes"]
-    
-    try:
-        df_p, _ = _ler_dados_brutos(sheet, "Produtos", cols_prod)
-        df_c, _ = _ler_dados_brutos(sheet, "Compras", cols_comp)
-        df_v, _ = _ler_dados_brutos(sheet, "Vendas", cols_vend)
-        return df_p, df_c, df_v
-    except Exception as e:
-        st.error(f"Erro ao ler abas: {e}") 
-        return None, None, None
+# --- INÍCIO DO APP ---
+st.title("📦 Sistema Zeidan Parfum")
 
-# --- GERADORES DE CÓDIGO ---
+# Tenta conectar
+sheet = conectar_google_sheets()
+
+if sheet is None:
+    st.stop()
+
+st.success("CONECTADO COM SUCESSO! 🎉")
+
+# --- CARREGAMENTO DE DADOS ---
+cols_prod = ["ID", "Produto", "Custo_Padrao", "Preco_Venda"]
+cols_comp = ["Pedido", "Data", "Data_Chegada", "ID", "Produto", "Qtd", "Custo_Unit", "Fornecedor", "Status", "Observacoes"]
+cols_vend = ["Pedido", "ID", "Produto", "Status", "Custo", "Preco_Tabela", "Lucro_Dif", "Valor_Recebido", "Margem_Perc", "Data", "Plataforma", "Ponto_de_Contato", "Observacoes"]
+
+try:
+    df_produtos, _ = _ler_dados_brutos(sheet, "Produtos", cols_prod)
+    df_compras, _ = _ler_dados_brutos(sheet, "Compras", cols_comp)
+    df_vendas, _ = _ler_dados_brutos(sheet, "Vendas", cols_vend)
+except Exception as e:
+    st.error(f"Erro ao ler abas: {e}")
+    st.stop()
+
+# --- MENU LATERAL ---
+menu = st.sidebar.radio("Menu", ["Vender", "Comprar", "Cadastrar Produto", "Relatórios"])
+
 def gerar_id_venda(df_vendas):
     if df_vendas is None or df_vendas.empty or "Pedido" not in df_vendas.columns: return "ZP01"
     try:
@@ -148,23 +131,6 @@ def gerar_id_compra(df_compras):
         numero = int(str(ultimo).replace("CP", ""))
         return f"CP{numero + 1:02d}"
     except: return "CP??"
-
-# --- INÍCIO DO APP (INTERFACE) ---
-st.title("📦 Sistema Zeidan Parfum")
-
-sheet = conectar_google_sheets()
-
-if sheet is None:
-    st.stop() 
-
-df_produtos, df_compras, df_vendas = carregar_dados_cache()
-
-if df_produtos is None:
-    st.warning("⚠️ Conectado, mas não consegui ler os dados.")
-    st.stop()
-
-# --- MENU LATERAL ---
-menu = st.sidebar.radio("Menu", ["Vender", "Comprar", "Cadastrar Produto", "Relatórios"])
 
 # ================= TELA: VENDER =================
 if menu == "Vender":
@@ -200,7 +166,6 @@ if menu == "Vender":
                     lucro, val, f"{margem:.2%}", dt.strftime("%d/%m/%Y"), plat, cli, obs
                 ])
                 st.success("✅ Venda Registrada!")
-                st.cache_data.clear()
                 st.rerun()
 
 # ================= TELA: COMPRAR =================
@@ -236,7 +201,6 @@ elif menu == "Comprar":
                     id_sel, dados["Produto"], qtd, custo, forn, stat, obs
                 ])
                 st.success("✅ Compra Registrada!")
-                st.cache_data.clear()
                 st.rerun()
 
 # ================= TELA: CADASTRAR =================
@@ -253,7 +217,6 @@ elif menu == "Cadastrar Produto":
             if id_n and nome:
                 sheet.worksheet("Produtos").append_row([id_n, nome, custo, venda])
                 st.success("✅ Produto Criado!")
-                st.cache_data.clear()
                 st.rerun()
             else:
                 st.warning("Preencha ID e Nome!")
