@@ -14,7 +14,13 @@ st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="w
 NUMERO_ZAP = "5531991668430"
 # ======================================================================
 
-# --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT BEM SIMPLES) ---
+# --- ESTADO INICIAL DOS FILTROS ---
+if "marca" not in st.session_state:
+    st.session_state["marca"] = "Todas"
+if "busca" not in st.session_state:
+    st.session_state["busca"] = ""
+
+# --- ESTILO VISUAL ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap');
@@ -23,13 +29,11 @@ st.markdown("""
         font-family: 'Montserrat', sans-serif;
     }
     
-    /* Fundo */
     .stApp {
         background-color: #162d48;
         color: #FFFFFF;
     }
 
-    /* Barra de Busca - específica para o campo desta página */
     .stTextInput input[aria-label="Busca Perfume"] {
         color: #162d48;
         background-color: #d2d2d2;
@@ -41,7 +45,6 @@ st.markdown("""
         font-size: 16px;
     }
     
-    /* Cartão do Produto */
     .product-card {
         background-color: #233e58;
         padding: 20px;
@@ -63,7 +66,6 @@ st.markdown("""
         box-shadow: 0 15px 30px rgba(0,0,0,0.4);
     }
 
-    /* Título do Perfume */
     .prod-title {
         font-size: 16px;
         font-weight: 700;
@@ -78,7 +80,6 @@ st.markdown("""
         line-height: 1.3;
     }
 
-    /* Preço */
     .price-tag {
         font-size: 24px;
         color: #d2d2d2;
@@ -88,7 +89,6 @@ st.markdown("""
         padding-top: 15px;
     }
 
-    /* Botão do WhatsApp */
     a.zap-btn {
         display: block;
         width: 100%;
@@ -108,7 +108,6 @@ st.markdown("""
         box-shadow: 0 5px 20px rgba(37, 211, 102, 0.5);
     }
     
-    /* Espaçamento do container principal */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 5rem;
@@ -151,7 +150,7 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- LOGO ESTÁTICA (SEM LINK NEM BOTÃO) ---
+# --- LOGO ESTÁTICA ---
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
@@ -174,7 +173,9 @@ else:
         unsafe_allow_html=True,
     )
 
-# --- MENU DE MARCAS (ABAIXO DA LOGO) ---
+# --- MENU DE MARCAS (SEM teclado extra) ---
+# Infelizmente o popup de teclado ao abrir selectbox no mobile é um bug conhecido
+# do Streamlit e não há como desativar totalmente hoje. [web:138]
 col_menu, col_vazio = st.columns([2, 3])
 with col_menu:
     marca = st.selectbox(
@@ -195,19 +196,45 @@ with col_menu:
             "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
             "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
         ],
-        index=0,
+        index=[
+            "Todas",
+            "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
+            "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
+            "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
+            "CAROLINA HERRERA", "CHLOÉ", "COACH", "CREED", "DIOR",
+            "DOLCE&GABANNA", "FERRARI", "FRENCH AVENUE",
+            "GABRIELA SABATINI", "GIORGIO ARMANI", "GIVENCHY", "INITIO",
+            "ISSEY MIYAKE", "JACQUES BOGART", "JEAN PAUL GAULTIER",
+            "LANCÔME", "LATTAFA", "MAISON ALHAMBRA",
+            "MAISON FRANCIS KURKDJIAN", "MAISON MARGIELA", "MICALLEF",
+            "MEMO", "MONTALE", "MONTBLANC", "NAUTICA", "NISHANE",
+            "ORIENTICA", "PACO RABBANE", "PANA DORA", "PARFUMS DE MARLY",
+            "RALPH LAUREN", "ROJA PARFUMS", "SOSPIRO",
+            "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
+        ].index(st.session_state["marca"]),
+        key="marca",
     )
 
-# --- BARRA DE BUSCA ---
+st.session_state["marca"] = marca
+
+# --- BARRA DE BUSCA + BOTÃO LIMPAR ---
 st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns([1, 4, 1])
+c1, c2, c3, c4 = st.columns([0.5, 3, 1, 0.5])
+
 with c2:
     busca = st.text_input(
         "Busca Perfume",
         placeholder="🔍 Digite o nome do perfume...",
         label_visibility="collapsed",
+        key="busca",
     )
+
+with c3:
+    if st.button("Início"):
+        st.session_state["marca"] = "Todas"
+        st.session_state["busca"] = ""
+        st.rerun()
 
 # --- CARREGAMENTO ---
 df = carregar_catalogo()
@@ -216,11 +243,11 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-if "Marca" in df.columns and marca != "Todas":
-    df = df[df["Marca"] == marca]
+if "Marca" in df.columns and st.session_state["marca"] != "Todas":
+    df = df[df["Marca"] == st.session_state["marca"]]
 
-if busca:
-    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
+if st.session_state["busca"]:
+    df = df[df["Produto"].astype(str).str.contains(st.session_state["busca"], case=False)]
 
 df = df[df["Preco_Venda"] != ""]
 
