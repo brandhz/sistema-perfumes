@@ -1,3 +1,42 @@
+# ==========================================
+# 🚨 ÁREA DE DIAGNÓSTICO DETALHADA 🚨
+# ==========================================
+try:
+    if "CREDENCIAIS_JSON" in st.secrets:
+        info = json.loads(st.secrets["CREDENCIAIS_JSON"], strict=False)
+        email_robo = info.get("client_email", "Não encontrado")
+        
+        st.divider()
+        st.info(f"🤖 **Robô conectado:** `{email_robo}`")
+        
+        scope_diag = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds_diag = ServiceAccountCredentials.from_json_keyfile_dict(info, scope_diag)
+        client_diag = gspread.authorize(creds_diag)
+        
+        # O PULO DO GATO: Lista tudo sem filtro
+        st.write("📂 **O que o robô consegue ver no Google Drive dele:**")
+        lista = client_diag.list_spreadsheet_files()
+        
+        if not lista:
+            st.error("🚫 A lista está VAZIA! O robô não vê nada.")
+            st.markdown("""
+            **Possíveis Causas:**
+            1. Você esqueceu de ativar a **Google Drive API** (É diferente da Sheets API!).
+            2. O compartilhamento ainda não 'propagou' (espere 2 minutos).
+            """)
+            st.markdown("[👉 Clique aqui para ativar a Drive API](https://console.cloud.google.com/apis/library/drive.googleapis.com?project=sistemaestoque-482120)")
+        else:
+            for arq in lista:
+                st.warning(f"📄 Achei: **{arq['name']}** \n (ID: `{arq['id']}`)")
+                
+                # Teste automático se é a planilha certa
+                if arq['name'] == "Controle Zeidan Parfum":
+                    st.success("👆 **ACHEI SUA PLANILHA!** Copie o ID acima e coloque nos Secrets!")
+                    
+    st.divider()
+
+except Exception as e:
+    st.error(f"⚠️ Erro no diagnóstico: {e}")
 import streamlit as st
 import pandas as pd
 import gspread
@@ -164,3 +203,4 @@ def carregar_dados_cache():
         # AQUI ESTAVA O ERRO! AGORA ESTÁ CORRIGIDO COM AS CHAVES E PARÊNTESES CERTOS:
         st.error(f"Erro ao ler abas: {e}") 
         return None, None, None
+
