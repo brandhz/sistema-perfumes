@@ -92,7 +92,7 @@ st.markdown("""
     }
     
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.2rem;   /* menos espaço no topo */
         padding-bottom: 5rem;
     }
 </style>
@@ -133,15 +133,15 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# ====================== LOGO + MARCAS COLADAS ======================
+# ====================== LOGO + MARCAS ======================
 
-# Logo centralizada
+# Logo centralizada um pouco mais acima
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
     st.markdown(
         f'<img src="data:image/png;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:10px;">',
+        f'style="display:block;margin:auto;width:230px;max-width:75%;height:auto;padding-bottom:4px;">',
         unsafe_allow_html=True,
     )
 elif os.path.exists("logo.jpg"):
@@ -149,22 +149,22 @@ elif os.path.exists("logo.jpg"):
         data = base64.b64encode(f.read()).decode("utf-8")
     st.markdown(
         f'<img src="data:image/jpeg;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:10px;">',
+        f'style="display:block;margin:auto;width:230px;max-width:75%;height:auto;padding-bottom:4px;">',
         unsafe_allow_html=True,
     )
 else:
     st.markdown(
-        "<h1 style='color:#d2d2d2; font-size: 40px; text-align: center; margin-bottom:10px;'>ZEIDAN PARFUM</h1>",
+        "<h1 style='color:#d2d2d2; font-size: 36px; text-align: center; margin-bottom:4px;'>ZEIDAN PARFUM</h1>",
         unsafe_allow_html=True,
     )
 
-# Selectbox de marcas logo abaixo da logo, centralizado
-c1, c2, c3 = st.columns([1, 2, 1])
+# Selectbox de marcas bem colado na logo, centralizado
+c1, c2, c3 = st.columns([0.8, 2.4, 0.8])
 with c2:
     marca = st.selectbox(
-        "Marcas",
+        "MARCAS",
         [
-            "Todas",
+            "TODAS AS MARCAS",
             "ADYAN", "AFEER", "AFNAN", "AL HARAMAIN", "AL WATANIAH",
             "AMARAN", "ANFAR", "ANFAS", "ARD AL ZAAFARAN", "ARMAF",
             "ASTEN", "BIDAYA", "BULGARI", "BURBERRY", "CALVIN KLEIN",
@@ -180,10 +180,11 @@ with c2:
             "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
         ],
         index=0,
-        label_visibility="collapsed",  # some o rótulo para reduzir o vão
+        label_visibility="collapsed",
     )
 
-st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+# pequeno ajuste de espaço antes da vitrine
+st.markdown("<div style='margin-top:2px;'></div>", unsafe_allow_html=True)
 
 # ====================== CATÁLOGO ======================
 
@@ -193,11 +194,9 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-# Filtro por marca
-if "Marca" in df.columns and marca != "Todas":
+if "Marca" in df.columns and marca != "TODAS AS MARCAS":
     df = df[df["Marca"] == marca]
 
-# Remove produtos sem preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
