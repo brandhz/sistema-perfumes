@@ -28,17 +28,6 @@ st.markdown("""
         color: #FFFFFF;
     }
 
-    .stTextInput input[aria-label="Busca Perfume"] {
-        color: #162d48;
-        background-color: #d2d2d2;
-        border-radius: 30px;
-        border: none;
-        padding: 15px 25px;
-        font-family: 'Montserrat', sans-serif;
-        font-weight: 600;
-        font-size: 16px;
-    }
-    
     .product-card {
         background-color: #233e58;
         padding: 20px;
@@ -144,13 +133,15 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- LOGO ESTÁTICA ---
+# ====================== LOGO + MARCAS COLADAS ======================
+
+# Logo centralizada
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
     st.markdown(
         f'<img src="data:image/png;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;">',
+        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:10px;">',
         unsafe_allow_html=True,
     )
 elif os.path.exists("logo.jpg"):
@@ -158,18 +149,18 @@ elif os.path.exists("logo.jpg"):
         data = base64.b64encode(f.read()).decode("utf-8")
     st.markdown(
         f'<img src="data:image/jpeg;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;">',
+        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:10px;">',
         unsafe_allow_html=True,
     )
 else:
     st.markdown(
-        "<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>ZEIDAN PARFUM</h1>",
+        "<h1 style='color:#d2d2d2; font-size: 40px; text-align: center; margin-bottom:10px;'>ZEIDAN PARFUM</h1>",
         unsafe_allow_html=True,
     )
 
-# --- MENU DE MARCAS ---
-col_menu, col_vazio = st.columns([2, 3])
-with col_menu:
+# Selectbox de marcas logo abaixo da logo, centralizado
+c1, c2, c3 = st.columns([1, 2, 1])
+with c2:
     marca = st.selectbox(
         "Marcas",
         [
@@ -189,32 +180,24 @@ with col_menu:
             "STÉPHANE HUMBERT LUCAS", "TOM FORD", "XERJOFF"
         ],
         index=0,
+        label_visibility="collapsed",  # some o rótulo para reduzir o vão
     )
 
-# --- BARRA DE BUSCA ---
-st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
 
-c1, c2, c3 = st.columns([1, 4, 1])
-with c2:
-    busca = st.text_input(
-        "Busca Perfume",
-        placeholder="🔍 Digite o nome do perfume...",
-        label_visibility="collapsed",
-    )
+# ====================== CATÁLOGO ======================
 
-# --- CARREGAMENTO ---
 df = carregar_catalogo()
 
 if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
+# Filtro por marca
 if "Marca" in df.columns and marca != "Todas":
     df = df[df["Marca"] == marca]
 
-if busca:
-    df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
-
+# Remove produtos sem preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
