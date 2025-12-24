@@ -151,30 +151,35 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- LOGO HTML: CLICA E VOLTA NA MESMA ABA (href="/") ---
-if os.path.exists("logo.png"):
-    with open("logo.png", "rb") as f:
-        data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(
-        f'<a href="/"><img src="data:image/png;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;"></a>',
-        unsafe_allow_html=True,
-    )
-elif os.path.exists("logo.jpg"):
-    with open("logo.jpg", "rb") as f:
-        data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(
-        f'<a href="/"><img src="data:image/jpeg;base64,{data}" '
-        f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;"></a>',
-        unsafe_allow_html=True,
-    )
-else:
-    st.markdown(
-        "<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>"
-        "<a href='/' style='color:#d2d2d2; text-decoration:none;'>ZEIDAN PARFUM</a>"
-        "</h1>",
-        unsafe_allow_html=True,
-    )
+# --- LOGO + BOTÃO HOME (SEM NOVA ABA) ---
+col_logo, col_btn = st.columns([4, 1])
+
+with col_logo:
+    if os.path.exists("logo.png"):
+        with open("logo.png", "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        st.markdown(
+            f'<img src="data:image/png;base64,{data}" '
+            f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;">',
+            unsafe_allow_html=True,
+        )
+    elif os.path.exists("logo.jpg"):
+        with open("logo.jpg", "rb") as f:
+            data = base64.b64encode(f.read()).decode("utf-8")
+        st.markdown(
+            f'<img src="data:image/jpeg;base64,{data}" '
+            f'style="display:block;margin:auto;width:250px;max-width:80%;height:auto;padding-bottom:20px;">',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            "<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>ZEIDAN PARFUM</h1>",
+            unsafe_allow_html=True,
+        )
+
+with col_btn:
+    if st.button("Home"):
+        st.experimental_rerun()
 
 # --- MENU DE MARCAS (ABAIXO DA LOGO) ---
 col_menu, col_vazio = st.columns([2, 3])
