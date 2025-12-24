@@ -46,27 +46,34 @@ def conectar_google_sheets():
     try:
         creds = None
         
-        # 1. Tenta pegar do BLOCO JSON nos Secrets (Novo método)
+        # 1. Tenta pegar do BLOCO JSON nos Secrets
         if "CREDENCIAIS_JSON" in st.secrets:
-            # Carrega o texto JSON e converte para dicionário
             info_json = st.secrets["CREDENCIAIS_JSON"]
             creds_dict = json.loads(info_json, strict=False)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
             
-        # 2. Fallback: Tenta pegar arquivo local (apenas no seu PC)
+        # 2. Fallback: Tenta pegar arquivo local
         elif os.path.exists("zeidan-parfum.json"):
              creds = ServiceAccountCredentials.from_json_keyfile_name("zeidan-parfum.json", scope)
         
         if creds:
             client = gspread.authorize(creds)
-            id_planilha = URL_PLANILHA.split("/d/")[1].split("/")[0]
-return client.open_by_key(id_planilha)
+            
+            # TENTA ABRIR PELO ID (Mais seguro contra erro 404)
+            # Ele pega aquele monte de letras entre /d/ e /edit
+            try:
+                id_planilha = URL_PLANILHA.split("/d/")[1].split("/")[0]
+                return client.open_by_key(id_planilha)
+            except IndexError:
+                # Se o link estiver num formato estranho, tenta abrir direto
+                return client.open_by_url(URL_PLANILHA)
         else:
-            st.error("❌ Erro: Credenciais não encontradas. Verifique se colou o bloco CREDENCIAIS_JSON nos Secrets.")
+            st.error("❌ Erro: Credenciais não encontradas. Verifique os Secrets.")
             return None
 
     except Exception as e:
-        st.error(f"❌ Erro de Conexão: {e}")
+        # AQUI ESTAVA O ERRO: Faltava esse bloco para capturar o problema
+        st.error(f"❌ Erro de Conexão Detalhado: {e}")
         return None
 
 # --- FUNÇÕES ÚTEIS ---
@@ -281,4 +288,5 @@ try:
         st.info("👆 Copie esse e-mail acima, vá na sua planilha > Compartilhar > Cole ele lá como Editor.")
 except:
     st.error("Não consegui ler o e-mail do robô nos secrets.")
+
 
