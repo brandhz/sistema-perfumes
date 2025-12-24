@@ -17,39 +17,39 @@ except:
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
 # --- LOGIN SIMPLES ---
-# (Simplifiquei para focar na conexão primeiro)
 senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
-if senha != "12041995": # Senha fixa para teste
-    st.warning("Digite a senha correta (12041995) para entrar.")
+if senha != "12041995": 
+    st.info("Digite a senha para acessar.")
     st.stop()
 
-# --- CONEXÃO COM GOOGLE SHEETS (MODO FORÇADO) ---
-# Removi o @st.cache_resource para obrigar ele a tentar conectar do zero toda vez
+# --- CONEXÃO COM GOOGLE SHEETS (ESTRATÉGIA: ABRIR PELO NOME) ---
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     try:
-        # 1. Tenta pegar do BLOCO JSON nos Secrets
         if "CREDENCIAIS_JSON" in st.secrets:
             info_json = st.secrets["CREDENCIAIS_JSON"]
             creds_dict = json.loads(info_json, strict=False)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
             client = gspread.authorize(creds)
             
-            # --- AQUI ESTÁ A MÁGICA ---
-            # Estou colocando o ID direto aqui. Se funcionar, sabemos que o erro era no link.
-            ID_FIXO = "1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZNWaV-k"
+            # --- MUDANÇA AQUI: ABRIR PELO NOME DO ARQUIVO ---
+            # Como o diagnóstico viu o nome "Controle Zeidan Parfum", vamos usar isso.
+            # Isso evita problemas com o formato do ID.
+            NOME_PLANILHA = "Controle Zeidan Parfum"
             
-            st.toast("Tentando abrir planilha...", icon="🔄")
-            return client.open_by_key(ID_FIXO)
+            st.toast(f"Procurando planilha: {NOME_PLANILHA}...", icon="🔍")
+            return client.open(NOME_PLANILHA)
             
         else:
-            st.error("❌ ERRO: Secrets 'CREDENCIAIS_JSON' não encontrado.")
+            st.error("❌ ERRO: Secrets 'CREDENCIAIS_JSON' sumiu.")
             return None
 
     except Exception as e:
         st.error(f"❌ Erro de Conexão: {e}")
-        st.info("💡 DICA: Se o erro for 404, verifique se a 'Google Sheets API' está ativada no Google Cloud.")
+        st.markdown("### O que fazer:")
+        st.markdown("1. Verifique se o nome da planilha no Google é **exatamente** `Controle Zeidan Parfum`.")
+        st.markdown("2. Se mudou o nome, atualize na linha 38 do código.")
         return None
 
 # --- FUNÇÕES ÚTEIS ---
@@ -69,32 +69,33 @@ def limpar_numero(valor):
 def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
     try:
         worksheet = sheet.worksheet(nome_aba)
-        dados = worksheet.get_all_records()
-        df = pd.DataFrame(dados)
-        if df.empty:
-            df = pd.DataFrame(columns=colunas_esperadas)
-        else:
-            for col in colunas_esperadas:
-                if col not in df.columns:
-                    df[col] = ""
-            if "ID" in df.columns:
-                df["ID"] = df["ID"].astype(str)
-        return df, worksheet
     except gspread.WorksheetNotFound:
+        # Se a aba não existe, cria ela agora
+        st.toast(f"Criando aba {nome_aba}...", icon="🛠️")
         worksheet = sheet.add_worksheet(title=nome_aba, rows=100, cols=20)
         worksheet.append_row(colunas_esperadas)
-        return pd.DataFrame(columns=colunas_esperadas), worksheet
+    
+    dados = worksheet.get_all_records()
+    df = pd.DataFrame(dados)
+    if df.empty:
+        df = pd.DataFrame(columns=colunas_esperadas)
+    else:
+        for col in colunas_esperadas:
+            if col not in df.columns:
+                df[col] = ""
+        if "ID" in df.columns:
+            df["ID"] = df["ID"].astype(str)
+    return df, worksheet
 
 # --- INÍCIO DO APP ---
 st.title("📦 Sistema Zeidan Parfum")
 
-# Tenta conectar
 sheet = conectar_google_sheets()
 
 if sheet is None:
     st.stop()
 
-st.success("CONECTADO COM SUCESSO! 🎉")
+st.success("CONECTADO VIA NOME! 🚀")
 
 # --- CARREGAMENTO DE DADOS ---
 cols_prod = ["ID", "Produto", "Custo_Padrao", "Preco_Venda"]
@@ -106,7 +107,7 @@ try:
     df_compras, _ = _ler_dados_brutos(sheet, "Compras", cols_comp)
     df_vendas, _ = _ler_dados_brutos(sheet, "Vendas", cols_vend)
 except Exception as e:
-    st.error(f"Erro ao ler abas: {e}")
+    st.error(f"Erro crítico ao ler abas: {e}")
     st.stop()
 
 # --- MENU LATERAL ---
