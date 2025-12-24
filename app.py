@@ -270,3 +270,13 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
+
+# --- CÓDIGO DE DIAGNÓSTICO (Pode apagar depois) ---
+try:
+    if "CREDENCIAIS_JSON" in st.secrets:
+        dados = json.loads(st.secrets["CREDENCIAIS_JSON"], strict=False)
+        email_robo = dados["client_email"]
+        st.warning(f"🤖 O E-MAIL DO ROBÔ É: {email_robo}")
+        st.info("👆 Copie esse e-mail acima, vá na sua planilha > Compartilhar > Cole ele lá como Editor.")
+except:
+    st.error("Não consegui ler o e-mail do robô nos secrets.")
