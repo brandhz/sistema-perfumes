@@ -209,7 +209,7 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-if "Marca" in df.columns and marca != "Todas":
+if "Marca" in df.columns and marca != "TODAS":
     df = df[df["Marca"] == marca]
 
 if busca:
