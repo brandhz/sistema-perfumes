@@ -280,4 +280,16 @@ for index, row in df.iterrows():
         st.markdown(f"""
         <div class="product-card">
             <a href="{img_url}" target="_blank"
-               style="height
+               style="height: 250px; display: flex; align-items: center; justify-content: center;
+                      background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
+                <img src="{img_url}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+            </a>
+            <div>
+                <div class="prod-title">{row['Produto']}</div>
+                <div class="price-tag">R$ {preco}</div>
+                <a href="{link_zap}" target="_blank" class="zap-btn">
+                    💎 Encomendar
+                </a>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
