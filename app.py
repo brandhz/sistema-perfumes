@@ -8,7 +8,6 @@ import json
 import os
 
 # --- CONFIGURAÇÃO INICIAL ---
-# Tenta carregar o .env (apenas se estiver no seu computador local)
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -19,17 +18,15 @@ st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
 # --- FUNÇÃO DE SEGURANÇA ---
 def pegar_segredo(chave):
-    # 1. Tenta pegar dos Secrets do Streamlit (Nuvem)
     if chave in st.secrets:
         return st.secrets[chave]
-    # 2. Tenta pegar do .env ou variáveis de ambiente (Local)
     return os.getenv(chave)
 
 # --- LOGIN ---
 senha_secreta = pegar_segredo("SENHA_ACESSO")
 
 if not senha_secreta:
-    st.error("ERRO CRÍTICO: Senha não configurada! Configure nos 'Secrets' do Streamlit Cloud ou no arquivo .env.")
+    st.error("ERRO CRÍTICO: Senha não configurada! Verifique os 'Secrets'.")
     st.stop()
 
 senha = st.sidebar.text_input("🔒 Senha de Acesso", type="password")
@@ -40,38 +37,31 @@ if senha != str(senha_secreta):
 
 # --- URL DA PLANILHA ---
 URL_PLANILHA = pegar_segredo("LINK_DA_PLANILHA")
-if not URL_PLANILHA:
-    st.error("ERRO: Link da planilha não encontrado nas configurações.")
-    st.stop()
 
-# --- CONEXÃO COM GOOGLE SHEETS (BLINDADA) ---
+# --- CONEXÃO COM GOOGLE SHEETS (MÉTODO INFALÍVEL JSON) ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     try:
-        # Tenta conectar usando os Secrets do Streamlit (Prioridade para Nuvem)
-        if "gcp_service_account" in st.secrets:
-            # Converte o objeto de segredos para um dicionário Python normal
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # Correção vital: O TOML às vezes estraga as quebras de linha da chave privada
-            if "private_key" in creds_dict:
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-            
+        creds = None
+        
+        # 1. Tenta pegar do BLOCO JSON nos Secrets (Novo método)
+        if "CREDENCIAIS_JSON" in st.secrets:
+            # Carrega o texto JSON e converte para dicionário
+            info_json = st.secrets["CREDENCIAIS_JSON"]
+            creds_dict = json.loads(info_json, strict=False)
             creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-            client = gspread.authorize(creds)
-            return client.open_by_url(URL_PLANILHA)
             
-        # Fallback: Tenta conectar localmente via arquivo JSON (apenas desenvolvimento)
-        # Se você ainda tiver o arquivo no PC, ele usa. Se não, dá erro.
+        # 2. Fallback: Tenta pegar arquivo local (apenas no seu PC)
         elif os.path.exists("zeidan-parfum.json"):
              creds = ServiceAccountCredentials.from_json_keyfile_name("zeidan-parfum.json", scope)
-             client = gspread.authorize(creds)
-             return client.open_by_url(URL_PLANILHA)
-             
+        
+        if creds:
+            client = gspread.authorize(creds)
+            return client.open_by_url(URL_PLANILHA)
         else:
-            st.error("❌ Erro: Credenciais não encontradas. Verifique se preencheu os 'Secrets' no Streamlit Cloud corretamente.")
+            st.error("❌ Erro: Credenciais não encontradas. Verifique se colou o bloco CREDENCIAIS_JSON nos Secrets.")
             return None
 
     except Exception as e:
@@ -100,16 +90,13 @@ def _ler_dados_brutos(sheet, nome_aba, colunas_esperadas):
         if df.empty:
             df = pd.DataFrame(columns=colunas_esperadas)
         else:
-            # Garante que todas as colunas esperadas existam
             for col in colunas_esperadas:
                 if col not in df.columns:
                     df[col] = ""
-            # Garante que ID seja texto para não dar erro de busca
             if "ID" in df.columns:
                 df["ID"] = df["ID"].astype(str)
         return df, worksheet
     except gspread.WorksheetNotFound:
-        # Se a aba não existir, cria ela automaticamente
         worksheet = sheet.add_worksheet(title=nome_aba, rows=100, cols=20)
         worksheet.append_row(colunas_esperadas)
         return pd.DataFrame(columns=colunas_esperadas), worksheet
@@ -137,7 +124,6 @@ def carregar_dados_cache():
 def gerar_id_venda(df_vendas):
     if df_vendas is None or df_vendas.empty or "Pedido" not in df_vendas.columns: return "ZP01"
     try:
-        # Filtra apenas códigos que começam com ZP para evitar erro
         lista = [x for x in df_vendas["Pedido"] if str(x).startswith("ZP")]
         if not lista: return "ZP01"
         ultimo = lista[-1]
@@ -159,13 +145,14 @@ def gerar_id_compra(df_compras):
 st.title("📦 Sistema Zeidan Parfum")
 
 sheet = conectar_google_sheets()
-df_produtos, df_compras, df_vendas = carregar_dados_cache()
 
 if sheet is None:
-    st.stop() # Para o app aqui se não conectar
+    st.stop() 
+
+df_produtos, df_compras, df_vendas = carregar_dados_cache()
 
 if df_produtos is None:
-    st.warning("⚠️ Conectado, mas não consegui ler os dados. Verifique se a planilha está vazia.")
+    st.warning("⚠️ Conectado, mas não consegui ler os dados.")
     st.stop()
 
 # --- MENU LATERAL ---
@@ -180,7 +167,6 @@ if menu == "Vender":
 
     if selecao:
         id_sel = selecao.split(" - ")[0]
-        # Pega os dados do produto selecionado
         dados = df_produtos.loc[df_produtos["ID"] == id_sel].iloc[0]
         
         with st.form("venda"):
@@ -201,14 +187,12 @@ if menu == "Vender":
             if st.form_submit_button("Confirmar Venda"):
                 lucro = val - cus
                 margem = (lucro / val) if val > 0 else 0
-                
-                # Salva na planilha
                 sheet.worksheet("Vendas").append_row([
                     ped, id_sel, dados["Produto"], stat, cus, limpar_numero(dados["Preco_Venda"]),
                     lucro, val, f"{margem:.2%}", dt.strftime("%d/%m/%Y"), plat, cli, obs
                 ])
                 st.success("✅ Venda Registrada!")
-                st.cache_data.clear() # Limpa cache para atualizar tabelas
+                st.cache_data.clear()
                 st.rerun()
 
 # ================= TELA: COMPRAR =================
@@ -273,15 +257,12 @@ elif menu == "Relatórios":
     
     with tab1:
         if df_vendas is not None and not df_vendas.empty:
-            # Converte data para filtrar o mês atual
             df_vendas['Data_Obj'] = pd.to_datetime(df_vendas['Data'], format='%d/%m/%Y', errors='coerce')
             mes_atual = pegar_hora_brasil().month
             vendas_mes = df_vendas[df_vendas['Data_Obj'].dt.month == mes_atual]
-            
             if not vendas_mes.empty:
                 total_mes = vendas_mes["Valor_Recebido"].apply(limpar_numero).sum()
                 st.metric(f"Faturamento Mês {mes_atual}", f"R$ {total_mes:,.2f}")
-            
             st.dataframe(df_vendas.drop(columns=['Data_Obj'], errors='ignore'), hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de vendas.")
         
