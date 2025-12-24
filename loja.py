@@ -12,8 +12,6 @@ st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="w
 # ======================================================================
 # 👇 SEU WHATSAPP AQUI
 NUMERO_ZAP = "5531991668430"
-# 👇 URL DA HOME (APP PUBLICADO)
-HOME_URL = "https://zeidanparfum.streamlit.app"
 # ======================================================================
 
 # --- ESTILO VISUAL (CSS MONTSERRAT + LAYOUT BEM SIMPLES) ---
@@ -115,17 +113,6 @@ st.markdown("""
         padding-top: 2rem;
         padding-bottom: 5rem;
     }
-    
-    /* --- CORREÇÃO DA LOGO --- */
-    .logo-img {
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-        width: 250px;
-        max-width: 80%;
-        height: auto;
-        padding-bottom: 20px;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -164,32 +151,13 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- ÁREA DA LOGO (HTML DIRETO) - CLICÁVEL ---
+# --- LOGO USANDO st.logo (CLICA E VOLTA SEM ABRIR ABA) ---
 if os.path.exists("logo.png"):
-    with open("logo.png", "rb") as f:
-        data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(
-        f'<a href="{HOME_URL}">'
-        f'<img src="data:image/png;base64,{data}" class="logo-img"></a>',
-        unsafe_allow_html=True,
-    )
-
+    st.logo("logo.png", link="/")
 elif os.path.exists("logo.jpg"):
-    with open("logo.jpg", "rb") as f:
-        data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(
-        f'<a href="{HOME_URL}">'
-        f'<img src="data:image/jpeg;base64,{data}" class="logo-img"></a>',
-        unsafe_allow_html=True,
-    )
-
+    st.logo("logo.jpg", link="/")
 else:
-    st.markdown(
-        f"<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>"
-        f"<a href='{HOME_URL}' style='color:#d2d2d2; text-decoration:none;'>"
-        f"ZEIDAN PARFUM</a></h1>",
-        unsafe_allow_html=True,
-    )
+    st.title("ZEIDAN PARFUM")
 
 # --- MENU DE MARCAS (ABAIXO DA LOGO) ---
 col_menu, col_vazio = st.columns([2, 3])
@@ -215,7 +183,7 @@ with col_menu:
         index=0,
     )
 
-# --- BARRA DE BUSCA (MAIS PERTO DA LOGO) ---
+# --- BARRA DE BUSCA ---
 st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
 
 c1, c2, c3 = st.columns([1, 4, 1])
@@ -233,15 +201,12 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-# filtro por marca (se existir coluna 'Marca' na planilha)
 if "Marca" in df.columns and marca != "Todas":
     df = df[df["Marca"] == marca]
 
-# filtro por busca
 if busca:
     df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
-# remove produtos sem preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -249,7 +214,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE (st.columns(2) + clique abre maior) ---
+# --- VITRINE ---
 cols = st.columns(2)
 
 for index, row in df.iterrows():
