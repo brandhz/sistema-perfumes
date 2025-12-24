@@ -9,10 +9,12 @@ import base64
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
-# ==============================================================================
+# ======================================================================
 # 👇 SEU WHATSAPP AQUI
-NUMERO_ZAP = "5531991668430" 
-# ==============================================================================
+NUMERO_ZAP = "5531991668430"
+# 👇 URL DA HOME (APP PUBLICADO)
+HOME_URL = "https://zeidanparfum.streamlit.app"
+# ======================================================================
 
 # --- ESTILO VISUAL (CSS MONTSERRAT + CORREÇÃO DA LOGO) ---
 st.markdown("""
@@ -29,8 +31,8 @@ st.markdown("""
         color: #FFFFFF;
     }
 
-    /* Barra de Busca */
-    .stTextInput > div > div > input {
+    /* Barra de Busca - específica para o campo desta página */
+    .stTextInput input[aria-label="Busca Perfume"] {
         color: #162d48;
         background-color: #d2d2d2;
         border-radius: 30px;
@@ -115,13 +117,12 @@ st.markdown("""
     }
     
     /* --- CORREÇÃO DA LOGO --- */
-    /* Isso força a imagem a ser um bloco centralizado com tamanho fixo */
     .logo-img {
         display: block;
         margin-left: auto;
         margin-right: auto;
-        width: 250px; /* Tamanho fixo ideal */
-        max-width: 80%; /* Segurança pra celular muito pequeno */
+        width: 250px;
+        max-width: 80%;
         height: auto;
         padding-bottom: 20px;
     }
@@ -131,12 +132,15 @@ st.markdown("""
 # --- CONEXÃO ---
 @st.cache_resource
 def conectar_google_sheets():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    scope = ["https://spreadsheets.google.com/feeds",
+             "https://www.googleapis.com/auth/drive"]
     try:
         if "CREDENCIAIS_JSON" in st.secrets:
             info_json = st.secrets["CREDENCIAIS_JSON"]
             creds_dict = json.loads(info_json, strict=False)
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(
+                creds_dict, scope
+            )
             client = gspread.authorize(creds)
             return client.open("Controle Zeidan Parfum")
         else:
@@ -148,7 +152,8 @@ def conectar_google_sheets():
 @st.cache_data(ttl=60)
 def carregar_catalogo():
     sheet = conectar_google_sheets()
-    if not sheet: return pd.DataFrame()
+    if not sheet:
+        return pd.DataFrame()
     try:
         ws = sheet.worksheet("Produtos")
         dados = ws.get_all_records()
@@ -159,26 +164,52 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- ÁREA DA LOGO (HTML DIRETO) ---
-# Removemos colunas do Streamlit para usar CSS puro na logo
+# --- ÁREA DA LOGO (HTML DIRETO) - CLICÁVEL ---
 if os.path.exists("logo.png"):
     with open("logo.png", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(f'<img src="data:image/png;base64,{data}" class="logo-img">', unsafe_allow_html=True)
+    st.markdown(
+        f'<a href="{HOME_URL}">'
+        f'<img src="data:image/png;base64,{data}" class="logo-img"></a>',
+        unsafe_allow_html=True,
+    )
 
 elif os.path.exists("logo.jpg"):
     with open("logo.jpg", "rb") as f:
         data = base64.b64encode(f.read()).decode("utf-8")
-    st.markdown(f'<img src="data:image/jpeg;base64,{data}" class="logo-img">', unsafe_allow_html=True)
+    st.markdown(
+        f'<a href="{HOME_URL}">'
+        f'<img src="data:image/jpeg;base64,{data}" class="logo-img"></a>',
+        unsafe_allow_html=True,
+    )
 
 else:
-    st.markdown("<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>ZEIDAN PARFUM</h1>", unsafe_allow_html=True)
+    st.markdown(
+        f"<h1 style='color:#d2d2d2; font-size: 50px; text-align: center;'>"
+        f"<a href='{HOME_URL}' style='color:#d2d2d2; text-decoration:none;'>"
+        f"ZEIDAN PARFUM</a></h1>",
+        unsafe_allow_html=True,
+    )
 
+# --- MENU DE MARCAS (ABAIXO DA LOGO) ---
+col_menu, col_vazio = st.columns([2, 3])
+with col_menu:
+    marca = st.selectbox(
+        "Marcas",
+        ["Todas", "Lattafa", "Armaf", "Zara", "Dior"],
+        index=0,
+    )
 
-# --- BARRA DE BUSCA ---
+# --- BARRA DE BUSCA (MAIS PERTO DA LOGO) ---
+st.markdown("<div style='margin-top:-5px;'></div>", unsafe_allow_html=True)
+
 c1, c2, c3 = st.columns([1, 4, 1])
 with c2:
-    busca = st.text_input("", placeholder="🔍 Digite o nome do perfume...")
+    busca = st.text_input(
+        "Busca Perfume",
+        placeholder="🔍 Digite o nome do perfume...",
+        label_visibility="collapsed",
+    )
 
 # --- CARREGAMENTO ---
 df = carregar_catalogo()
@@ -187,9 +218,15 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
+# filtro por marca (se existir coluna 'Marca' na planilha)
+if "Marca" in df.columns and marca != "Todas":
+    df = df[df["Marca"] == marca]
+
+# filtro por busca
 if busca:
     df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
+# remove produtos sem preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -197,30 +234,28 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- LIMPEZA DO ZAP ---
 zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
-# --- VITRINE ---
-cols = st.columns(3)
+# --- VITRINE (2 PRODUTOS POR LINHA + ZOOM NA IMAGEM) ---
+cols = st.columns(2)
 
 for index, row in df.iterrows():
-    with cols[index % 3]:
-        # Imagem
+    with cols[index % 2]:
         img_url = row.get("Imagem", "")
-        # Se estiver vazio ou não for link, usa genérico
         if not str(img_url).startswith("http"):
             img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
-        
-        # Link Zap
+
         msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
         msg_encoded = msg.replace(" ", "%20")
         link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
-        # Card HTML (Fundo Branco na área da imagem para destacar frasco)
         st.markdown(f"""
         <div class="product-card">
-            <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
+            <a href="{img_url}" target="_blank"
+               style="height: 250px; display: flex; align-items: center; justify-content: center;
+                      background: white; border-radius: 15px; overflow: hidden; margin-bottom: 15px;">
                 <img src="{img_url}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-            </div>
+            </a>
             <div>
                 <div class="prod-title">{row['Produto']}</div>
                 <div class="price-tag">R$ {preco}</div>
