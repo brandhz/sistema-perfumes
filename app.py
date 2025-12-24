@@ -17,55 +17,43 @@ except:
 st.set_page_config(page_title="Zeidan Parfum System", layout="wide")
 
 # ==========================================
-# 🚨 ÁREA DE DIAGNÓSTICO (RODA NO TOPO) 🚨
+# 🚨 ÁREA DE DIAGNÓSTICO (TESTE DO ROBÔ) 🚨
 # ==========================================
 try:
-    st.divider()
-    st.markdown("### 🕵️ Diagnóstico de Conexão")
-    
     if "CREDENCIAIS_JSON" in st.secrets:
         # 1. Tenta ler quem é o robô
         info = json.loads(st.secrets["CREDENCIAIS_JSON"], strict=False)
         email_robo = info.get("client_email", "Não encontrado")
-        st.info(f"🤖 **O Robô é:** `{email_robo}`")
-        st.caption("👆 Copie este e-mail e verifique se ele está como EDITOR na planilha.")
-
-        # 2. Tenta conectar no Google Drive para listar arquivos
-        scope_diag = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds_diag = ServiceAccountCredentials.from_json_keyfile_dict(info, scope_diag)
-        client_diag = gspread.authorize(creds_diag)
         
-        # Tenta listar as planilhas que ele vê
-        lista = client_diag.list_spreadsheet_files()
-        
-        if not lista:
-            st.error("🚫 O robô conectou, mas não vê NENHUMA planilha.")
-            st.warning("⚠️ PROVÁVEL CAUSA: Você precisa ativar a 'Google Drive API' no console do Google Cloud.")
-        else:
+        # Só mostra o diagnóstico se não estiver conectado ainda (para não poluir a tela)
+        # Se quiser ver sempre, remova esse 'if'
+        if 'diagnostico_ok' not in st.session_state:
+            st.info(f"🤖 **Testando Robô:** `{email_robo}`")
+            
+            scope_diag = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+            creds_diag = ServiceAccountCredentials.from_json_keyfile_dict(info, scope_diag)
+            client_diag = gspread.authorize(creds_diag)
+            
+            lista = client_diag.list_spreadsheet_files()
+            
             encontrei = False
-            st.write("📂 **Planilhas que eu consigo ver:**")
             for arq in lista:
-                st.write(f"- 📄 {arq['name']} (ID: `{arq['id']}`)")
-                # Verifica se é a planilha certa (pelo ID do Zeidan)
                 if "1q5pgZ3OEpJhFjdbZ19xp1k2dUWzXhPL16SRMZNWaV-k" in arq['id']:
                     encontrei = True
             
             if encontrei:
-                st.success("✅ SUCESSO! O robô tem acesso à sua planilha!")
+                st.success("✅ CONEXÃO PERFEITA! O robô encontrou sua planilha.")
+                st.session_state['diagnostico_ok'] = True
             else:
-                st.warning("⚠️ O robô vê algumas planilhas, mas NÃO a do Zeidan Parfum. Verifique o compartilhamento.")
+                st.error("🚫 O robô conectou, mas NÃO VIU a planilha 'Zeidan'. Verifique o compartilhamento!")
     else:
-        st.error("❌ ERRO: Não encontrei 'CREDENCIAIS_JSON' nos Secrets!")
-
-    st.divider()
+        st.warning("⚠️ Aguardando configuração dos Secrets...")
 
 except Exception as e:
-    # Se der erro aqui, é porque a API está desligada ou o JSON está errado
-    st.error(f"❌ O diagnóstico falhou. Erro: {e}")
-    st.warning("DICA: Verifique se ativou 'Google Sheets API' e 'Google Drive API' no Google Cloud.")
+    st.error(f"⚠️ Aviso do Diagnóstico: {e}")
 
 # ==========================================
-# 🏁 FIM DO DIAGNÓSTICO - INÍCIO DO APP 🏁
+# 🏁 INÍCIO DO SISTEMA 🏁
 # ==========================================
 
 # --- FUNÇÃO DE SEGURANÇA ---
@@ -88,7 +76,7 @@ if senha != str(senha_secreta):
 # --- URL DA PLANILHA ---
 URL_PLANILHA = pegar_segredo("LINK_DA_PLANILHA")
 
-# --- CONEXÃO COM GOOGLE SHEETS (BLINDADA) ---
+# --- CONEXÃO COM GOOGLE SHEETS ---
 @st.cache_resource
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -110,14 +98,12 @@ def conectar_google_sheets():
             client = gspread.authorize(creds)
             # TENTA ABRIR PELO ID (Mais seguro contra erro 404)
             try:
-                # Tenta extrair o ID se for link completo
                 if "/d/" in URL_PLANILHA:
                     id_planilha = URL_PLANILHA.split("/d/")[1].split("/")[0]
                     return client.open_by_key(id_planilha)
                 else:
                     return client.open_by_url(URL_PLANILHA)
             except Exception:
-                # Se falhar a extração, tenta abrir direto
                 return client.open_by_url(URL_PLANILHA)
         else:
             return None
@@ -175,4 +161,6 @@ def carregar_dados_cache():
         df_v, _ = _ler_dados_brutos(sheet, "Vendas", cols_vend)
         return df_p, df_c, df_v
     except Exception as e:
-        st.error(f"Erro ao ler abas: {e
+        # AQUI ESTAVA O ERRO! AGORA ESTÁ CORRIGIDO COM AS CHAVES E PARÊNTESES CERTOS:
+        st.error(f"Erro ao ler abas: {e}") 
+        return None, None, None
