@@ -95,7 +95,6 @@ sheet = conectar_google_sheets()
 if sheet is None:
     st.stop()
 
-st.success("CONECTADO VIA NOME! 🚀")
 
 # --- CARREGAMENTO DE DADOS ---
 cols_prod = ["ID", "Produto", "Custo_Padrao", "Preco_Venda"]
@@ -242,3 +241,4 @@ elif menu == "Relatórios":
         if df_compras is not None and not df_compras.empty:
             st.dataframe(df_compras, hide_index=True, use_container_width=True)
         else: st.info("Sem histórico de compras.")
+
