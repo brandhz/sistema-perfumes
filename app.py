@@ -52,9 +52,10 @@ def conectar_google_sheets():
     try:
         # Tenta conectar usando os Secrets do Streamlit (Prioridade para Nuvem)
         if "gcp_service_account" in st.secrets:
+            # Converte o objeto de segredos para um dicionário Python normal
             creds_dict = dict(st.secrets["gcp_service_account"])
             
-            # Correção para quebras de linha na chave privada
+            # Correção vital: O TOML às vezes estraga as quebras de linha da chave privada
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
             
@@ -63,13 +64,14 @@ def conectar_google_sheets():
             return client.open_by_url(URL_PLANILHA)
             
         # Fallback: Tenta conectar localmente via arquivo JSON (apenas desenvolvimento)
+        # Se você ainda tiver o arquivo no PC, ele usa. Se não, dá erro.
         elif os.path.exists("zeidan-parfum.json"):
              creds = ServiceAccountCredentials.from_json_keyfile_name("zeidan-parfum.json", scope)
              client = gspread.authorize(creds)
              return client.open_by_url(URL_PLANILHA)
              
         else:
-            st.error("❌ Erro: Credenciais não encontradas. Verifique os 'Secrets' no Streamlit Cloud.")
+            st.error("❌ Erro: Credenciais não encontradas. Verifique se preencheu os 'Secrets' no Streamlit Cloud corretamente.")
             return None
 
     except Exception as e:
