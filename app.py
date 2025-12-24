@@ -218,6 +218,9 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
+st.write("Colunas do DF:", df.columns.tolist())
+st.write(df.head())
+
 # filtro por marca (se existir coluna 'Marca' na planilha)
 if "Marca" in df.columns and marca != "Todas":
     df = df[df["Marca"] == marca]
@@ -265,3 +268,4 @@ for index, row in df.iterrows():
             </div>
         </div>
         """, unsafe_allow_html=True)
+
