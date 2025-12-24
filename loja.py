@@ -8,13 +8,16 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Zeidan Parfum Store", page_icon="💎", layout="wide")
 
+# ==============================================================================
+# 👇👇👇 CONFIGURAÇÃO DO WHATSAPP (JÁ ATUALIZADO) 👇👇👇
+NUMERO_ZAP = "5531991668430" 
+# ==============================================================================
+
 # --- ESTILO VISUAL (CSS) ---
 st.markdown("""
 <style>
-    /* Importando APENAS a Montserrat */
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
-    /* APLICANDO MONTSERRAT EM TUDO */
     html, body, [class*="css"] {
         font-family: 'Montserrat', sans-serif;
     }
@@ -24,24 +27,21 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Fundo e Cores */
     .stApp {
-        background-color: #162d48; /* Azul Profundo */
+        background-color: #162d48;
         color: #FFFFFF;
     }
 
-    /* Barra de Busca */
     .stTextInput > div > div > input {
         color: #162d48;
         background-color: #d2d2d2;
-        border-radius: 25px; /* Mais arredondado */
+        border-radius: 25px;
         border: none;
         padding: 12px 20px;
         font-family: 'Montserrat', sans-serif;
         font-weight: 600;
     }
     
-    /* Cartão do Produto */
     .product-card {
         background-color: #233e58;
         padding: 20px;
@@ -59,10 +59,9 @@ st.markdown("""
         box-shadow: 0 12px 24px rgba(0,0,0,0.5);
     }
 
-    /* Título do Perfume */
     .prod-title {
         font-size: 16px;
-        font-weight: 600; /* Mais grosso */
+        font-weight: 600;
         margin: 15px 0 10px 0;
         min-height: 45px;
         display: flex;
@@ -74,7 +73,6 @@ st.markdown("""
         line-height: 1.2;
     }
 
-    /* Preço */
     .price-tag {
         font-size: 22px;
         color: #d2d2d2;
@@ -84,7 +82,6 @@ st.markdown("""
         padding-top: 10px;
     }
 
-    /* Botão do WhatsApp */
     a.zap-btn {
         display: inline-block;
         width: 100%;
@@ -104,7 +101,6 @@ st.markdown("""
         box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
     }
     
-    /* Remove espaço extra no topo */
     .block-container {
         padding-top: 1rem;
     }
@@ -142,23 +138,18 @@ def carregar_catalogo():
     except:
         return pd.DataFrame()
 
-# --- ÁREA DA LOGO (AJUSTADA PARA FICAR MAIOR) ---
-# Mudei a proporção das colunas: O meio agora é muito maior (6 partes)
+# --- HEADER E LOGO ---
 c1, c2, c3 = st.columns([1, 6, 1])
 
 with c2: 
     st.markdown("<div style='text-align: center; margin-bottom: 20px;'>", unsafe_allow_html=True)
-    
-    # Verifica a logo e define largura maior (350px)
     if os.path.exists("logo.png"):
         st.image("logo.png", width=350) 
     elif os.path.exists("logo.jpg"):
         st.image("logo.jpg", width=350)
     else:
-        # Texto caso não carregue a imagem
         st.markdown("<h1 style='color:#d2d2d2; font-size: 60px; font-weight:800;'>ZEIDAN</h1>", unsafe_allow_html=True)
         st.markdown("<h3 style='color:#fff; letter-spacing: 5px; font-size: 20px;'>PARFUM</h3>", unsafe_allow_html=True)
-    
     st.markdown("</div>", unsafe_allow_html=True)
 
 # --- BARRA DE BUSCA ---
@@ -173,35 +164,35 @@ if df.empty:
     st.info("Carregando catálogo...")
     st.stop()
 
-# --- FILTRAGEM ---
 if busca:
     df = df[df["Produto"].astype(str).str.contains(busca, case=False)]
 
-# Apenas produtos com preço
 df = df[df["Preco_Venda"] != ""]
 
 st.markdown("<br>", unsafe_allow_html=True)
+
+# --- LIMPEZA DO NÚMERO (GARANTIA) ---
+# Remove qualquer coisa que não seja número (espaços, traços, etc)
+zap_limpo = ''.join(filter(str.isdigit, NUMERO_ZAP))
 
 # --- VITRINE ---
 cols = st.columns(3)
 
 for index, row in df.iterrows():
     with cols[index % 3]:
-        # Imagem
         img_url = row.get("Imagem", "")
         if not str(img_url).startswith("http"):
             img_url = "https://cdn-icons-png.flaticon.com/512/3050/3050253.png"
 
         preco = str(row['Preco_Venda']).replace("R$", "").strip()
         
-        # --- SEU NÚMERO ---
-        TEL_ZEIDAN = "5531991668430"
-        
+        # Cria a mensagem
         msg = f"Olá! Gostaria de encomendar o perfume *{row['Produto']}* (R$ {preco})."
         msg_encoded = msg.replace(" ", "%20")
-        link_zap = f"https://wa.me/{TEL_ZEIDAN}?text={msg_encoded}"
+        
+        # Gera o link usando o número limpo
+        link_zap = f"https://wa.me/{zap_limpo}?text={msg_encoded}"
 
-        # Card
         st.markdown(f"""
         <div class="product-card">
             <div style="height: 220px; overflow: hidden; border-radius: 10px; margin-bottom: 15px; background-color: #fff;">
